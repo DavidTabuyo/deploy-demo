@@ -1,0 +1,134 @@
+name: demo-solucionfacil
+
+services:
+  gateway:
+    build:
+      context: ./gateway
+    restart: unless-stopped
+    depends_on:
+      bruma:
+        condition: service_healthy
+      pulso:
+        condition: service_healthy
+      norte:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:7575:80"
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  bruma:
+    image: demo-solucionfacil-bruma:local
+    build:
+      context: ../bruma
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://bruma:${BRUMA_DB_PASSWORD}@bruma-db:5432/bruma
+      AUTH_SECRET: ${BRUMA_AUTH_SECRET}
+      APP_URL: https://demo.solucionfacil.es/bruma
+      PAYMENT_PROVIDER: demo
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      EMAIL_PROVIDER: demo
+      ALLOW_DEMO_RESET: "false"
+    depends_on:
+      bruma-init:
+        condition: service_completed_successfully
+    networks:
+      - frontend
+      - bruma-backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/bruma/api/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+
+  bruma-init:
+    image: demo-solucionfacil-bruma:local
+    restart: "no"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://bruma:${BRUMA_DB_PASSWORD}@bruma-db:5432/bruma
+      AUTH_SECRET: ${BRUMA_AUTH_SECRET}
+      APP_URL: https://demo.solucionfacil.es/bruma
+      PAYMENT_PROVIDER: demo
+      EMAIL_PROVIDER: demo
+    depends_on:
+      bruma-db:
+        condition: service_healthy
+    command: ["sh", "-c", "npm run db:migrate && ./node_modules/.bin/tsx scripts/seed-if-empty.ts"]
+    networks:
+      - bruma-backend
+
+  bruma-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bruma
+      POSTGRES_USER: bruma
+      POSTGRES_PASSWORD: ${BRUMA_DB_PASSWORD}
+    volumes:
+      - bruma_pgdata:/var/lib/postgresql/data
+    networks:
+      - bruma-backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bruma -d bruma"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  pulso:
+    build:
+      context: ../pulso
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      APP_SECRET: ${PULSO_APP_SECRET}
+      DATABASE_URL: sqlite:////app/data/pulso.db
+      BASE_URL: https://demo.solucionfacil.es/pulso
+      DEMO_ADMIN_EMAIL: demo@pulsofisio.example
+      DEMO_ADMIN_PASSWORD: ${PULSO_DEMO_ADMIN_PASSWORD:-PulsoDemo2026!}
+      BOOKING_MIN_NOTICE_HOURS: "2"
+      BOOKING_MAX_DAYS: "60"
+      BOOKING_CHANGE_NOTICE_HOURS: "12"
+      TIMEZONE: Europe/Madrid
+    volumes:
+      - pulso_data:/app/data
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 15s
+
+  norte:
+    build:
+      context: ../norte
+    restart: unless-stopped
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+networks:
+  frontend:
+  bruma-backend:
+    internal: true
+
+volumes:
+  bruma_pgdata:
+  pulso_data:
