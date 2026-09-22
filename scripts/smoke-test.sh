@@ -25,5 +25,7 @@ check "/pulso/health"
 check "/norte/"
 check "/norte/proyectos/"
 check "/norte/contacto/"
+check "/opotest/"
+check "/opotest/health"
 
 echo "Smoke test completado."

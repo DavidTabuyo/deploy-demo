@@ -12,6 +12,8 @@ services:
         condition: service_healthy
       norte:
         condition: service_healthy
+      opotest:
+        condition: service_healthy
     ports:
       - "127.0.0.1:7575:80"
     networks:
@@ -124,6 +126,15 @@ services:
       retries: 5
       start_period: 10s
 
+  opotest:
+    build:
+      context: ../opotest-demo
+    restart: unless-stopped
+    volumes:
+      - opotest_data:/data
+    networks:
+      - frontend
+
 networks:
   frontend:
   bruma-backend:
@@ -132,3 +143,4 @@ networks:
 volumes:
   bruma_pgdata:
   pulso_data:
+  opotest_data:
