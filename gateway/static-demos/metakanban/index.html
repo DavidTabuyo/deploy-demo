@@ -1702,7 +1702,7 @@
     }
 
     const starterWorkspace = {
-      activeBoardId:"__metakanban__",
+      activeBoardId:"saas",
       boards:[
         makeBoard("saas","Plataforma SaaS","layers","#17c7d9",[
           {id:"saas-t1",columnId:"saas-backlog",title:"Definir permisos por rol",description:"Matriz de permisos para administradores, editores y usuarios de solo lectura.",priority:"high",enteredAt:now-75*60*1000,archived:false,archivedAt:null},
@@ -1866,7 +1866,12 @@
     function loadWorkspace(){
       try{
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        if(saved?.boards?.length && saved.activeBoardId) return saved;
+        if(saved?.boards?.length && saved.activeBoardId){
+          saved.activeBoardId = saved.boards.some(board => board.id === "saas")
+            ? "saas"
+            : saved.boards[0].id;
+          return saved;
+        }
       }catch(e){}
       return structuredClone(starterWorkspace);
     }
