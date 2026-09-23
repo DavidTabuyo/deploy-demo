@@ -80,18 +80,25 @@
     /* ---------- Sidebar ---------- */
 
     .sidebar{
-      min-height:100vh;
+      position:fixed;
+      inset:0 auto 0 0;
+      width:var(--sidebar-collapsed);
+      height:100vh;
       background:#070707;
       border-right:1px solid var(--line);
       overflow:hidden;
-      position:relative;
-      z-index:20;
+      z-index:40;
       transition:width .24s var(--ease);
+    }
+
+    .workspace.sidebar-open .sidebar{
+      width:var(--sidebar-open);
     }
 
     .sidebar-inner{
       width:var(--sidebar-open);
-      min-height:100vh;
+      height:100vh;
+      min-height:0;
       display:flex;
       flex-direction:column;
       position:relative;
@@ -117,86 +124,52 @@
       align-items:center;
       justify-content:center;
       cursor:pointer;
-      transition:color .15s ease,transform .18s var(--ease);
+      transition:color .15s ease;
     }
 
     .sidebar-toggle:hover{color:var(--accent)}
+
     .sidebar-toggle .icon{
       width:16px;
       height:16px;
     }
 
-
+    /*
+      Project icons now belong to the real project rows in both states.
+      Nothing is duplicated or repositioned when the sidebar opens.
+    */
     .sidebar-rail-actions{
-      position:absolute;
-      top:var(--header-h);
-      left:0;
-      width:var(--sidebar-collapsed);
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:9px;
-      padding-top:6px;
-      opacity:1;
-      pointer-events:auto;
-      transition:opacity .12s ease;
-    }
-
-    .workspace.sidebar-open .sidebar-rail-actions{
-      opacity:0;
-      pointer-events:none;
-    }
-
-    .rail-action{
-      width:34px;
-      height:34px;
-      padding:0;
-      background:transparent;
-      color:#505854;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      cursor:pointer;
-      transition:color .14s ease,transform .14s ease;
-    }
-
-    .rail-action:hover{
-      color:var(--accent);
-      transform:translateY(-1px);
-    }
-
-    .rail-action .icon{
-      width:15px;
-      height:15px;
-    }
-
-    .meta-rail-action{
-      color:var(--accent);
+      display:none !important;
     }
 
     .sidebar-content{
       width:100%;
-      padding:4px 8px 12px;
-      opacity:0;
-      transform:translateX(-6px);
-      pointer-events:none;
-      transition:opacity .14s ease,transform .2s var(--ease);
-    }
-
-    .workspace.sidebar-open .sidebar-content{
+      flex:1 1 auto;
+      min-height:0;
+      overflow-y:auto;
+      overflow-x:hidden;
+      padding:4px 7px 70px;
       opacity:1;
       transform:none;
       pointer-events:auto;
-      transition-delay:.06s;
+      scrollbar-width:thin;
+      scrollbar-color:#1c1c19 transparent;
+    }
+
+    .sidebar-content::-webkit-scrollbar{width:5px}
+    .sidebar-content::-webkit-scrollbar-thumb{
+      background:#1c1c19;
+      border-radius:999px;
     }
 
     .sidebar-label{
-      padding:0 6px 8px;
+      padding:0 6px 8px 38px;
       color:#4d514f;
       font-size:9px;
       font-weight:750;
       text-transform:uppercase;
       letter-spacing:.11em;
+      white-space:nowrap;
     }
 
     .project-list{
@@ -212,7 +185,7 @@
       padding:0 6px;
       display:flex;
       align-items:center;
-      gap:9px;
+      gap:13px;
       background:transparent;
       color:#8a8d88;
       cursor:pointer;
@@ -297,12 +270,12 @@
       height:38px;
       margin-top:7px;
       border-radius:9px;
-      padding:0 7px;
+      padding:0 6px;
       background:transparent;
       color:#555b58;
       display:flex;
       align-items:center;
-      gap:9px;
+      gap:13px;
       cursor:pointer;
       font-size:11.5px;
       font-weight:650;
@@ -314,8 +287,14 @@
       color:var(--accent);
     }
 
-    .new-project .icon{width:14px;height:14px}
+    .new-project-icon{
+      color:var(--accent);
+    }
 
+    .new-project .project-icon .icon{
+      width:14px;
+      height:14px;
+    }
 
     .meta-row{
       margin-bottom:10px;
@@ -339,6 +318,7 @@
     /* ---------- Main ---------- */
 
     .main{
+      grid-column:2;
       min-width:0;
       min-height:100vh;
     }
@@ -630,9 +610,9 @@
     .task{
       position:relative;
       border-radius:var(--radius);
-      padding:13px 13px 11px 16px;
+      padding:10px 11px 8px 15px;
       min-width:0;
-      height:148px;
+      height:124px;
       cursor:grab;
       display:flex;
       flex-direction:column;
@@ -680,8 +660,8 @@
     .task-title{
       margin:0;
       color:#f1f1ee;
-      font-size:13.5px;
-      line-height:1.42;
+      font-size:13px;
+      line-height:1.35;
       font-weight:700;
       letter-spacing:-.01em;
       overflow-wrap:anywhere;
@@ -692,15 +672,15 @@
     }
 
     .task-description{
-      margin:7px 0 0;
+      margin:5px 0 0;
       color:#8b8b85;
-      font-size:12px;
-      line-height:1.45;
-      height:52.2px;
-      min-height:52.2px;
-      max-height:52.2px;
+      font-size:11.5px;
+      line-height:1.4;
+      height:32.2px;
+      min-height:32.2px;
+      max-height:32.2px;
       display:-webkit-box;
-      -webkit-line-clamp:3;
+      -webkit-line-clamp:2;
       -webkit-box-orient:vertical;
       overflow:hidden;
       overflow-wrap:anywhere;
@@ -710,7 +690,7 @@
 
     .task-meta{
       margin-top:auto;
-      padding-top:10px;
+      padding-top:6px;
       display:flex;
       align-items:center;
       justify-content:space-between;
@@ -735,7 +715,7 @@
 
     .archive-task,
     .unarchive-task{
-      height:24px;
+      height:22px;
       padding:0 8px;
       border-radius:7px;
       background:transparent;
@@ -792,9 +772,15 @@
     .column-placeholder{opacity:.2}
 
     .edge-add{
+      position:fixed;
+      top:var(--header-h);
+      right:0;
+      bottom:0;
+      z-index:24;
       width:44px;
-      min-height:100%;
-      background:transparent;
+      min-height:0;
+      height:auto;
+      background:var(--bg);
       color:#4f5f61;
       display:flex;
       align-items:center;
@@ -1048,7 +1034,7 @@
       transition:transform .18s var(--ease);
     }
 
-    .modal.compact{width:min(430px,100%)}
+    .modal.compact{width:min(430px,100%);max-height:calc(100vh - 32px);overflow:auto}
 
     .modal-backdrop.open .modal{transform:none}
 
@@ -1400,10 +1386,12 @@
       }
 
       .sidebar{
-        position:sticky;
+        position:fixed;
         left:0;
         top:0;
+        bottom:0;
         height:100vh;
+        width:var(--sidebar-collapsed);
         z-index:40;
       }
 
@@ -1462,11 +1450,14 @@
       .task-list{min-height:calc(100vh - var(--header-h) - 82px)}
 
       .edge-add{
-        position:sticky;
+        position:fixed;
+        top:var(--header-h);
         right:0;
-        min-height:calc(100vh - var(--header-h) - 18px);
+        bottom:0;
+        min-height:0;
+        height:auto;
         background:var(--bg);
-        z-index:6;
+        z-index:24;
       }
 
       .drag-handle{
@@ -1676,15 +1667,49 @@
       mail:`<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>`,
       map:`<svg class="icon" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z"></path><path d="M9 3v15"></path><path d="M15 6v15"></path></svg>`,
       cart:`<svg class="icon" viewBox="0 0 24 24"><path d="M3 3h2l2.4 10.2a2 2 0 0 0 2 1.6H18a2 2 0 0 0 2-1.6L21 7H6"></path><circle cx="10" cy="20" r="1"></circle><circle cx="18" cy="20" r="1"></circle></svg>`,
+      dollar:`<svg class="icon" viewBox="0 0 24 24"><path d="M12 2v20"></path><path d="M17 6.5c-1.2-1-2.9-1.5-5-1.5-2.8 0-5 1.4-5 3.5S9 12 12 12s5 1.2 5 3.5S14.8 19 12 19c-2.2 0-4-.6-5.4-1.8"></path></svg>`,
+      euro:`<svg class="icon" viewBox="0 0 24 24"><path d="M18.5 6.2A7 7 0 1 0 18.5 17.8"></path><path d="M4 10h10"></path><path d="M4 14h9"></path></svg>`,
+      coins:`<svg class="icon" viewBox="0 0 24 24"><ellipse cx="8" cy="6" rx="5" ry="3"></ellipse><path d="M3 6v4c0 1.7 2.2 3 5 3 1 0 2-.2 2.8-.5"></path><path d="M3 10v4c0 1.7 2.2 3 5 3"></path><ellipse cx="16" cy="14" rx="5" ry="3"></ellipse><path d="M11 14v4c0 1.7 2.2 3 5 3s5-1.3 5-3v-4"></path></svg>`,
+      wallet:`<svg class="icon" viewBox="0 0 24 24"><path d="M4 6h14a2 2 0 0 1 2 2v11H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12"></path><path d="M15 11h6v5h-6a2.5 2.5 0 0 1 0-5Z"></path></svg>`,
+      building:`<svg class="icon" viewBox="0 0 24 24"><path d="M4 21V5l8-3 8 3v16"></path><path d="M9 21v-4h6v4"></path><path d="M8 7h.01"></path><path d="M12 7h.01"></path><path d="M16 7h.01"></path><path d="M8 11h.01"></path><path d="M12 11h.01"></path><path d="M16 11h.01"></path></svg>`,
+      users:`<svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
+      user:`<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>`,
+      package:`<svg class="icon" viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5Z"></path><path d="m3 7 9 5 9-5v10l-9 5-9-5Z"></path><path d="M12 12v10"></path></svg>`,
+      bug:`<svg class="icon" viewBox="0 0 24 24"><path d="M8 6a4 4 0 0 1 8 0"></path><rect x="6" y="6" width="12" height="14" rx="6"></rect><path d="M3 13h3"></path><path d="M18 13h3"></path><path d="M4 7l3 2"></path><path d="M20 7l-3 2"></path></svg>`,
+      cloud:`<svg class="icon" viewBox="0 0 24 24"><path d="M17.5 19H7a5 5 0 0 1-.8-9.9A7 7 0 0 1 19.6 11 4 4 0 0 1 17.5 19Z"></path></svg>`,
+      lock:`<svg class="icon" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>`,
+      key:`<svg class="icon" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"></circle><path d="m11 12 9-9"></path><path d="m16 7 2 2"></path><path d="m18 5 2 2"></path></svg>`,
+      bell:`<svg class="icon" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg>`,
+      search:`<svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>`,
+      message:`<svg class="icon" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"></path></svg>`,
+      fileText:`<svg class="icon" viewBox="0 0 24 24"><path d="M6 2h8l4 4v16H6Z"></path><path d="M14 2v5h5"></path><path d="M9 13h6"></path><path d="M9 17h6"></path></svg>`,
+      clipboard:`<svg class="icon" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="18" rx="2"></rect><path d="M9 4V2h6v2"></path><path d="M9 10h6"></path><path d="M9 14h6"></path></svg>`,
+      checkCircle:`<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>`,
+      flag:`<svg class="icon" viewBox="0 0 24 24"><path d="M5 22V3"></path><path d="M5 4h11l-2 4 2 4H5"></path></svg>`,
+      trophy:`<svg class="icon" viewBox="0 0 24 24"><path d="M8 3h8v5a4 4 0 0 1-8 0Z"></path><path d="M8 5H4v2a4 4 0 0 0 4 4"></path><path d="M16 5h4v2a4 4 0 0 1-4 4"></path><path d="M12 12v5"></path><path d="M8 21h8"></path><path d="M9 17h6"></path></svg>`,
+      graduation:`<svg class="icon" viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5Z"></path><path d="M6 11v5c3 2 9 2 12 0v-5"></path><path d="M22 9v6"></path></svg>`,
+      lightbulb:`<svg class="icon" viewBox="0 0 24 24"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M8.5 15.5A7 7 0 1 1 15.5 15.5C14.5 16.5 14 17 14 18h-4c0-1-.5-1.5-1.5-2.5Z"></path></svg>`,
+      laptop:`<svg class="icon" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="11" rx="1"></rect><path d="M2 19h20"></path><path d="m5 15-2 4"></path><path d="m19 15 2 4"></path></svg>`,
       panelOpen:`<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path><path d="m14 9 3 3-3 3"></path></svg>`,
       panelClose:`<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path><path d="m17 9-3 3 3 3"></path></svg>`
 
     };
 
-    const PROJECT_ICONS = ["folder","layers","network","code","terminal","database","server","cpu","bot","sparkles","target","rocket","bolt","globe","map","plane","briefcase","calendar","chart","wrench","shield","book","box","palette","star","heart","music","camera","gamepad","phone","mail","cart","home","flask"];
+    const PROJECT_ICONS = [
+      "folder","layers","network","code","terminal","database","server","cpu","bot",
+      "sparkles","target","rocket","bolt","globe","map","plane","briefcase","calendar",
+      "chart","wrench","shield","book","box","palette","star","heart","music","camera",
+      "gamepad","phone","mail","cart","home","flask","dollar","euro","coins","wallet",
+      "building","users","user","package","bug","cloud","lock","key","bell","search",
+      "message","fileText","clipboard","checkCircle","flag","trophy","graduation",
+      "lightbulb","laptop"
+    ];
     const PROJECT_COLORS = [
-      "#17c7d9","#4ea1ff","#756eff","#b06cff","#e66dc2",
-      "#ff657d","#ff8b4a","#ffc44d","#75c66d","#38b795"
+      "#17c7d9","#4ea1ff","#2ea8ff","#756eff","#8f7cff",
+      "#b06cff","#d36df0","#e66dc2","#ef5da8","#ff657d",
+      "#ff526f","#f25f5c","#ff8b4a","#f59e0b","#ffc44d",
+      "#d6e86c","#8bc34a","#75c66d","#38b795","#00b8a9",
+      "#4fd1b5","#7f9cf5","#9b8cff","#55c2ff"
     ];
 
     const now = Date.now();
@@ -1856,7 +1881,7 @@
     document.getElementById("metaSidebarIcon").innerHTML = icons.network;
     document.getElementById("metaRailButton").innerHTML = icons.network;
     document.getElementById("newRailProject").innerHTML = icons.plus;
-    document.getElementById("newProject").innerHTML = `${icons.plus}<span>Nuevo kanban</span>`;
+    document.getElementById("newProject").innerHTML = `<span class="project-icon new-project-icon">${icons.plus}</span><span>Nuevo kanban</span>`;
     document.getElementById("closeTaskModal").innerHTML = icons.x;
     document.getElementById("closeProjectModal").innerHTML = icons.x;
     document.getElementById("priorityChevron").innerHTML = icons.down;
@@ -2203,6 +2228,7 @@
     }
 
     function renderBoard(){
+      sortBacklogByPriority(boardState);
       boardShell.classList.remove("meta-mode");
       board.style.setProperty("--columns",Math.max(boardState.columns.length,1));
       board.innerHTML = "";
@@ -2211,6 +2237,32 @@
       updateAges();
     }
 
+
+    const PRIORITY_RANK = Object.freeze({
+      high:0,
+      medium:1,
+      low:2
+    });
+
+    function sortBacklogByPriority(project = boardState){
+      if(!project?.columns?.length || !project?.tasks?.length) return;
+
+      const backlog = project.columns.find(column => column.isBacklog);
+      if(!backlog) return;
+
+      const backlogTasks = project.tasks
+        .filter(task => task.columnId === backlog.id && !task.archived)
+        .sort((a,b) =>
+          (PRIORITY_RANK[a.priority] ?? 99) -
+          (PRIORITY_RANK[b.priority] ?? 99)
+        );
+
+      const otherTasks = project.tasks.filter(
+        task => task.columnId !== backlog.id || task.archived
+      );
+
+      project.tasks = [...backlogTasks,...otherTasks];
+    }
 
     function getColumnSemanticClass(column){
       if(column?.isDone) return "semantic-done";
@@ -2455,6 +2507,7 @@
         }
 
         syncTasksFromDom();
+        sortBacklogByPriority(boardState);
         persistWorkspace();
         clearTaskDrag();
         renderBoard();
@@ -2876,6 +2929,7 @@
         });
       }
 
+      sortBacklogByPriority(boardState);
       persistWorkspace();
       renderBoard();
       closeModal(taskModalBackdrop);
@@ -2884,6 +2938,7 @@
     deleteTask.addEventListener("click",() => {
       if(!editingTaskId) return;
       boardState.tasks = boardState.tasks.filter(task => task.id !== editingTaskId);
+      sortBacklogByPriority(boardState);
       persistWorkspace();
       renderBoard();
       closeModal(taskModalBackdrop);
@@ -3175,6 +3230,7 @@
           task.archivedAt = null;
         }
         syncTasksFromDom();
+        sortBacklogByPriority(boardState);
         persistWorkspace();
       }
 
