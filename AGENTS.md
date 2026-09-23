@@ -19,6 +19,7 @@ Servicios actuales:
 | `/pulso/` | `pulso` | 8000 | Nginx elimina `/pulso` |
 | `/norte/` | `norte` | 80 | Nginx elimina `/norte` |
 | `/opotest/` | `opotest` | 8000 | Nginx elimina `/opotest`; la app genera URLs con ese prefijo |
+| `/metakanban/` | estático en `gateway` | — | Se sirve directamente desde `gateway/static-demos/metakanban/` |
 
 BRUMA usa PostgreSQL y los demás servicios gestionan su persistencia según su propio Compose. OpoTest conserva la SQLite plantilla en `opotest_data`; cada visitante trabaja sobre una copia temporal aislada.
 
@@ -36,6 +37,14 @@ BRUMA usa PostgreSQL y los demás servicios gestionan su persistencia según su 
 10. Actualizar README y este documento si cambia la arquitectura.
 
 No ejecutar el Compose independiente de una demo para publicarla: Cloudflare solo alcanza el gateway común del puerto 7575.
+
+### Integrar una demo estática
+
+1. Crear `gateway/static-demos/<slug>/index.html` y colocar allí sus recursos relativos.
+2. Añadir una ruta explícita en `gateway/nginx.conf` y permitir el slug en la expresión final de rutas conocidas.
+3. Añadir su tarjeta a `gateway/index.html` y su portada a `scripts/smoke-test.sh`.
+4. Actualizar README y esta tabla.
+5. Reconstruir y recrear únicamente `gateway`; una demo estática no necesita servicio Compose ni healthcheck propio.
 
 ## Validación y despliegue
 

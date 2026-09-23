@@ -27,5 +27,6 @@ check "/norte/proyectos/"
 check "/norte/contacto/"
 check "/opotest/"
 check "/opotest/health"
+check "/metakanban/"
 
 echo "Smoke test completado."

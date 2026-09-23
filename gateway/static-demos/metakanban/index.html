@@ -1,0 +1,3331 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kanban Workspace</title>
+  <style>
+    :root{
+      --bg:#050505;
+      --ink:#f5f5f3;
+      --muted:#858581;
+      --muted-2:#5b5b57;
+      --line:#1a1a18;
+      --line-strong:#252522;
+      --accent:#17c7d9;
+      --accent-soft:#0b1a1c;
+
+      --low:#2ea8ff;
+      --low-bg:#09151d;
+      --medium:#ffbd3f;
+      --medium-bg:#1b1507;
+      --high:#ff526f;
+      --high-bg:#1d0a0f;
+
+      --sidebar-collapsed:44px;
+      --sidebar-open:236px;
+      --header-h:54px;
+      --radius:12px;
+      --ease:cubic-bezier(.22,.72,.22,1);
+    }
+
+    *{box-sizing:border-box}
+
+    html,body{
+      width:100%;
+      min-height:100%;
+    }
+
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--ink);
+      font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      -webkit-font-smoothing:antialiased;
+      overflow-x:hidden;
+    }
+
+    button,input,textarea{font:inherit}
+    button{border:0;outline:0}
+
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible{
+      box-shadow:0 0 0 2px rgba(23,199,217,.22);
+    }
+
+    .icon{
+      width:17px;
+      height:17px;
+      display:block;
+      flex:0 0 auto;
+      fill:none;
+      stroke:currentColor;
+      stroke-width:1.8;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+
+    .workspace{
+      min-height:100vh;
+      display:grid;
+      grid-template-columns:var(--sidebar-collapsed) minmax(0,1fr);
+      transition:grid-template-columns .24s var(--ease);
+    }
+
+    .workspace.sidebar-open{
+      grid-template-columns:var(--sidebar-open) minmax(0,1fr);
+    }
+
+    /* ---------- Sidebar ---------- */
+
+    .sidebar{
+      min-height:100vh;
+      background:#070707;
+      border-right:1px solid var(--line);
+      overflow:hidden;
+      position:relative;
+      z-index:20;
+      transition:width .24s var(--ease);
+    }
+
+    .sidebar-inner{
+      width:var(--sidebar-open);
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      position:relative;
+    }
+
+    .sidebar-top{
+      width:var(--sidebar-collapsed);
+      height:var(--header-h);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0;
+      flex:0 0 auto;
+    }
+
+    .sidebar-toggle{
+      width:34px;
+      height:34px;
+      padding:0;
+      background:transparent;
+      color:#505854;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition:color .15s ease,transform .18s var(--ease);
+    }
+
+    .sidebar-toggle:hover{color:var(--accent)}
+    .sidebar-toggle .icon{
+      width:16px;
+      height:16px;
+    }
+
+
+    .sidebar-rail-actions{
+      position:absolute;
+      top:var(--header-h);
+      left:0;
+      width:var(--sidebar-collapsed);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:9px;
+      padding-top:6px;
+      opacity:1;
+      pointer-events:auto;
+      transition:opacity .12s ease;
+    }
+
+    .workspace.sidebar-open .sidebar-rail-actions{
+      opacity:0;
+      pointer-events:none;
+    }
+
+    .rail-action{
+      width:34px;
+      height:34px;
+      padding:0;
+      background:transparent;
+      color:#505854;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition:color .14s ease,transform .14s ease;
+    }
+
+    .rail-action:hover{
+      color:var(--accent);
+      transform:translateY(-1px);
+    }
+
+    .rail-action .icon{
+      width:15px;
+      height:15px;
+    }
+
+    .meta-rail-action{
+      color:var(--accent);
+    }
+
+    .sidebar-content{
+      width:100%;
+      padding:4px 8px 12px;
+      opacity:0;
+      transform:translateX(-6px);
+      pointer-events:none;
+      transition:opacity .14s ease,transform .2s var(--ease);
+    }
+
+    .workspace.sidebar-open .sidebar-content{
+      opacity:1;
+      transform:none;
+      pointer-events:auto;
+      transition-delay:.06s;
+    }
+
+    .sidebar-label{
+      padding:0 6px 8px;
+      color:#4d514f;
+      font-size:9px;
+      font-weight:750;
+      text-transform:uppercase;
+      letter-spacing:.11em;
+    }
+
+    .project-list{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+
+    .project-row{
+      width:100%;
+      height:38px;
+      border-radius:9px;
+      padding:0 6px;
+      display:flex;
+      align-items:center;
+      gap:9px;
+      background:transparent;
+      color:#8a8d88;
+      cursor:pointer;
+      position:relative;
+      transition:background .14s ease,color .14s ease;
+    }
+
+    .project-row:hover{
+      background:#0d0d0c;
+      color:#c8cbc6;
+    }
+
+    .project-row.active{
+      background:#10100f;
+      color:#f0f1ec;
+    }
+
+    .project-icon{
+      width:19px;
+      height:24px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex:0 0 auto;
+      color:var(--project-color);
+    }
+
+    .project-icon .icon{
+      width:15px;
+      height:15px;
+      stroke-width:1.9;
+    }
+
+    .project-name{
+      appearance:none;
+      border:0;
+      outline:0;
+      background:transparent;
+      color:inherit;
+      padding:0;
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      font-size:12px;
+      line-height:1;
+      font-weight:650;
+      flex:1 1 auto;
+      text-align:left;
+      cursor:pointer;
+    }
+
+    .project-edit{
+      width:26px;
+      height:26px;
+      border-radius:7px;
+      padding:0;
+      background:transparent;
+      color:#4e514e;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      opacity:0;
+      transition:opacity .12s ease,color .12s ease,background .12s ease;
+    }
+
+    .project-row:hover .project-edit,
+    .project-row.active .project-edit{
+      opacity:1;
+    }
+
+    .project-edit:hover{
+      color:var(--accent);
+      background:#151513;
+    }
+
+    .project-edit .icon{width:14px;height:14px}
+
+    .new-project{
+      width:100%;
+      height:38px;
+      margin-top:7px;
+      border-radius:9px;
+      padding:0 7px;
+      background:transparent;
+      color:#555b58;
+      display:flex;
+      align-items:center;
+      gap:9px;
+      cursor:pointer;
+      font-size:11.5px;
+      font-weight:650;
+      transition:background .14s ease,color .14s ease;
+    }
+
+    .new-project:hover{
+      background:var(--accent-soft);
+      color:var(--accent);
+    }
+
+    .new-project .icon{width:14px;height:14px}
+
+
+    .meta-row{
+      margin-bottom:10px;
+    }
+
+    .meta-row .project-name{
+      font-weight:720;
+      color:#dfe2dd;
+    }
+
+    .meta-row.active{
+      background:#101211;
+    }
+
+    .meta-separator{
+      height:1px;
+      margin:2px 6px 12px;
+      background:var(--line);
+    }
+
+    /* ---------- Main ---------- */
+
+    .main{
+      min-width:0;
+      min-height:100vh;
+    }
+
+    .board-header{
+      height:var(--header-h);
+      padding:0 20px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .current-project-icon{
+      width:19px;
+      height:27px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--project-color);
+      flex:0 0 auto;
+      cursor:pointer;
+      transition:opacity .14s ease,transform .14s ease;
+    }
+
+    .current-project-icon:hover{
+      opacity:.78;
+      transform:translateY(-1px);
+    }
+
+    .current-project-icon .icon{
+      width:16px;
+      height:16px;
+      stroke-width:1.9;
+    }
+
+    .current-title{
+      margin:0;
+      min-width:0;
+      color:#eeeeea;
+      font-size:15px;
+      line-height:1;
+      font-weight:730;
+      letter-spacing:-.018em;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      cursor:pointer;
+      transition:color .14s ease;
+    }
+
+    .current-title:hover{
+      color:var(--accent);
+    }
+
+    .header-spacer{flex:1 1 auto}
+
+
+    .board-shell{
+      width:100%;
+      min-height:calc(100vh - var(--header-h));
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 44px;
+      align-items:stretch;
+      padding:0 0 22px 20px;
+    }
+
+    .board{
+      width:100%;
+      min-height:calc(100vh - var(--header-h) - 22px);
+      display:grid;
+      grid-template-columns:repeat(var(--columns,3),minmax(0,1fr));
+      gap:0;
+      overflow:visible;
+      align-items:stretch;
+    }
+
+    .column{
+      min-width:0;
+      min-height:calc(100vh - var(--header-h) - 22px);
+      padding:0 16px 18px;
+      position:relative;
+      align-self:stretch;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .column:first-child{padding-left:0}
+    .column:last-child{padding-right:16px}
+
+    .column:not(:last-child)::after{
+      content:"";
+      position:absolute;
+      top:0;
+      right:0;
+      bottom:0;
+      width:1px;
+      background:var(--line);
+      pointer-events:none;
+    }
+
+    .column-head{
+      min-height:48px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:2px 0 11px;
+      position:relative;
+      z-index:2;
+      min-width:0;
+    }
+
+    .drag-handle{
+      width:16px;
+      height:28px;
+      padding:0;
+      border-radius:0;
+      background:transparent;
+      color:#3d4445;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:grab;
+      flex:0 0 auto;
+      opacity:.6;
+      transition:color .15s ease,opacity .15s ease,transform .15s ease;
+      touch-action:none;
+    }
+
+    .drag-handle .icon{width:13px;height:13px}
+
+    .drag-handle:hover{
+      color:var(--accent);
+      opacity:1;
+    }
+
+    .drag-handle:active{
+      cursor:grabbing;
+      transform:scale(.94);
+    }
+
+    .column-title-button{
+      appearance:none;
+      padding:0;
+      margin:0;
+      background:transparent;
+      color:var(--ink);
+      cursor:text;
+      text-align:left;
+      min-width:0;
+      max-width:100%;
+      font-size:13px;
+      line-height:1.25;
+      font-weight:700;
+      letter-spacing:-.01em;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+
+
+    .column-title-input{
+      width:100%;
+      min-width:0;
+      height:30px;
+      border:0;
+      outline:0;
+      border-radius:7px;
+      padding:0 8px;
+      background:#11110f;
+      color:var(--ink);
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .count{
+      height:22px;
+      min-width:22px;
+      padding:0 6px;
+      border-radius:999px;
+      background:var(--accent-soft);
+      color:#6db7c0;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:10px;
+      line-height:1;
+      font-weight:700;
+      flex:0 0 auto;
+    }
+
+    .count.semantic-backlog{
+      background:#151514;
+      color:#777772;
+    }
+
+    .count.semantic-progress{
+      background:#0d3439;
+      color:#67d7e2;
+    }
+
+    .count.semantic-done{
+      background:#102519;
+      color:#63c985;
+    }
+
+
+
+
+    .column-spacer{flex:1 1 auto;min-width:3px}
+
+    .add-task{
+      width:30px;
+      height:30px;
+      padding:0;
+      border-radius:8px;
+      background:transparent;
+      color:#6f6f6a;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition:background .15s ease,color .15s ease,transform .15s ease;
+      flex:0 0 auto;
+    }
+
+    .add-task:hover{
+      background:var(--accent-soft);
+      color:var(--accent);
+    }
+
+    .add-task:active{transform:scale(.96)}
+
+    .archive-filter{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      flex:0 0 auto;
+    }
+
+    .archive-filter-label{
+      color:#5e6464;
+      font-size:9.5px;
+      font-weight:650;
+      white-space:nowrap;
+    }
+
+    .switch{
+      width:28px;
+      height:16px;
+      border-radius:999px;
+      background:#1b1b19;
+      position:relative;
+      cursor:pointer;
+      padding:0;
+      flex:0 0 auto;
+      transition:background .16s ease;
+    }
+
+    .switch::after{
+      content:"";
+      position:absolute;
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      left:3px;
+      top:3px;
+      background:#666661;
+      transition:transform .18s var(--ease),background .18s ease;
+    }
+
+    .switch.on{background:#0d3439}
+
+    .switch.on::after{
+      transform:translateX(12px);
+      background:var(--accent);
+    }
+
+    .task-list{
+      min-height:100px;
+      flex:1 1 auto;
+      display:flex;
+      flex-direction:column;
+      gap:9px;
+      position:relative;
+      padding-bottom:18px;
+    }
+
+    .task{
+      position:relative;
+      border-radius:var(--radius);
+      padding:13px 13px 11px 16px;
+      min-width:0;
+      height:148px;
+      cursor:grab;
+      display:flex;
+      flex-direction:column;
+      user-select:none;
+      background:var(--task-bg);
+      overflow:hidden;
+      box-shadow:0 1px 0 rgba(255,255,255,.018) inset;
+      transition:background .18s ease,opacity .16s ease,transform .18s var(--ease);
+      will-change:transform;
+    }
+
+    .task.priority-low{--priority:var(--low);--task-bg:var(--low-bg)}
+    .task.priority-medium{--priority:var(--medium);--task-bg:var(--medium-bg)}
+    .task.priority-high{--priority:var(--high);--task-bg:var(--high-bg)}
+
+    .task::before{
+      content:"";
+      position:absolute;
+      left:0;
+      top:0;
+      bottom:0;
+      width:3px;
+      background:var(--priority);
+    }
+
+    .task:hover{
+      background:color-mix(in srgb,var(--task-bg) 79%,white 21%);
+    }
+
+    .task.dragging{
+      opacity:.24;
+      transform:scale(.985);
+    }
+
+    .task.archived{
+      opacity:.45;
+      cursor:default;
+    }
+
+    .task.archived:hover{
+      opacity:.58;
+      transform:none;
+    }
+
+    .task-title{
+      margin:0;
+      color:#f1f1ee;
+      font-size:13.5px;
+      line-height:1.42;
+      font-weight:700;
+      letter-spacing:-.01em;
+      overflow-wrap:anywhere;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+
+    .task-description{
+      margin:7px 0 0;
+      color:#8b8b85;
+      font-size:12px;
+      line-height:1.45;
+      height:52.2px;
+      min-height:52.2px;
+      max-height:52.2px;
+      display:-webkit-box;
+      -webkit-line-clamp:3;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+      overflow-wrap:anywhere;
+    }
+
+    .task-description.empty-description{visibility:hidden}
+
+    .task-meta{
+      margin-top:auto;
+      padding-top:10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      color:#666660;
+      font-size:10.5px;
+      line-height:1;
+      min-width:0;
+      overflow:visible;
+    }
+
+    .task-meta .icon{width:12px;height:12px}
+
+    .status-age{
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      white-space:nowrap;
+      overflow:visible;
+      min-width:max-content;
+    }
+
+    .archive-task,
+    .unarchive-task{
+      height:24px;
+      padding:0 8px;
+      border-radius:7px;
+      background:transparent;
+      color:#72746f;
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      cursor:pointer;
+      font-size:10px;
+      font-weight:650;
+      transition:
+        background .14s ease,
+        color .14s ease,
+        transform .14s ease;
+    }
+
+    .archive-task:hover{
+      background:#0d1516;
+      color:#a6dce2;
+    }
+
+    .unarchive-task{
+      color:#74877b;
+    }
+
+    .unarchive-task:hover{
+      background:#0e1712;
+      color:#8ed2a4;
+    }
+
+    .archive-task:active,
+    .unarchive-task:active{
+      transform:scale(.97);
+    }
+
+    .archive-task .icon,
+    .unarchive-task .icon{
+      width:12px;
+      height:12px;
+    }
+
+    .empty{
+      min-height:92px;
+      flex:1 1 auto;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#3e3e3a;
+      font-size:11.5px;
+      text-align:center;
+      pointer-events:none;
+    }
+
+    .column-placeholder{opacity:.2}
+
+    .edge-add{
+      width:44px;
+      min-height:100%;
+      background:transparent;
+      color:#4f5f61;
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      padding:0 0 0 8px;
+      cursor:pointer;
+      transition:background .15s ease,color .15s ease;
+      border-left:1px solid var(--line);
+      touch-action:none;
+    }
+
+    .edge-add:hover{
+      background:var(--accent-soft);
+      color:var(--accent);
+    }
+
+    .edge-add.trash-mode{
+      color:#75434b;
+      background:#10090b;
+      cursor:default;
+    }
+
+    .edge-add.trash-mode.can-delete{color:#d85c70}
+
+    .edge-add.trash-mode.can-delete.trash-hover{
+      color:#ff667e;
+      background:#210c11;
+    }
+
+    .edge-add.trash-mode.blocked{opacity:.55}
+    .edge-add .icon{width:15px;height:15px}
+
+    .touch-drag-ghost,
+    .column-drag-ghost{
+      position:fixed;
+      z-index:120;
+      pointer-events:none;
+      margin:0;
+      opacity:.92;
+      transform:rotate(.5deg) scale(1.015);
+      box-shadow:0 18px 50px rgba(0,0,0,.42);
+    }
+
+    .touch-drag-ghost{border-radius:var(--radius)}
+
+    .column-drag-ghost{
+      background:#080808;
+      border-radius:10px;
+      padding:0 16px 16px;
+      overflow:hidden;
+    }
+
+
+    .board-shell.meta-mode{
+      grid-template-columns:minmax(0,1fr);
+    }
+
+    .board-shell.meta-mode .edge-add{
+      display:none;
+    }
+
+    .meta-project-card{
+      position:relative;
+      min-height:166px;
+      border-radius:12px;
+      padding:13px 13px 12px 15px;
+      background:#0b0b0a;
+      overflow:hidden;
+      cursor:pointer;
+      user-select:none;
+      transition:background .16s ease,transform .18s var(--ease);
+    }
+
+    .meta-project-card::before{
+      content:"";
+      position:absolute;
+      left:0;
+      top:0;
+      bottom:0;
+      width:2px;
+      background:var(--project-color);
+      opacity:.82;
+    }
+
+    .meta-project-card:hover{
+      transform:translateY(-1px);
+      background:#10100f;
+    }
+
+
+    .meta-card-head{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width:0;
+      margin-bottom:11px;
+    }
+
+    .meta-card-icon{
+      width:17px;
+      height:20px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--project-color);
+      flex:0 0 auto;
+    }
+
+    .meta-card-icon .icon{
+      width:14px;
+      height:14px;
+    }
+
+    .meta-card-title{
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      color:#eeeeea;
+      font-size:12.5px;
+      font-weight:700;
+      flex:1 1 auto;
+    }
+
+
+    .mini-board{
+      height:103px;
+      display:grid;
+      grid-template-columns:repeat(var(--mini-cols,3),minmax(0,1fr));
+      background:#070707;
+      overflow:hidden;
+    }
+
+    .mini-column{
+      min-width:0;
+      padding:8px 6px 6px;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      position:relative;
+    }
+
+    .mini-column:not(:last-child)::after{
+      content:"";
+      position:absolute;
+      top:0;
+      right:0;
+      bottom:0;
+      width:1px;
+      background:#171715;
+    }
+
+    .mini-column-head{
+      width:max-content;
+      max-width:100%;
+      min-width:18px;
+      height:12px;
+      padding:0 4px;
+      border-radius:999px;
+      background:#171715;
+      color:#646460;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:5.5px;
+      line-height:1;
+      font-weight:800;
+      letter-spacing:.01em;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      margin-bottom:2px;
+    }
+
+    .mini-column-head.semantic-backlog{
+      background:#171715;
+      color:#85857f;
+    }
+
+    .mini-column-head.semantic-progress{
+      background:#0d3439;
+      color:#67d7e2;
+    }
+
+    .mini-column-head.semantic-done{
+      background:#102519;
+      color:#63c985;
+    }
+
+    .mini-column-head.semantic-custom{
+      background:var(--accent-soft);
+      color:#6db7c0;
+    }
+
+    .mini-task{
+      height:9px;
+      min-height:9px;
+      border-radius:2px;
+      background:var(--mini-priority);
+      opacity:.72;
+    }
+
+    .mini-task.priority-low{--mini-priority:var(--low)}
+    .mini-task.priority-medium{--mini-priority:var(--medium)}
+    .mini-task.priority-high{--mini-priority:var(--high)}
+
+    .mini-more{
+      color:#484843;
+      font-size:7px;
+      line-height:1;
+      margin-top:1px;
+    }
+
+    .meta-empty-copy{
+      color:#454541;
+      font-size:10px;
+      text-align:center;
+      margin:auto 0;
+    }
+
+    /* ---------- Dialogs ---------- */
+
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      z-index:80;
+      background:rgba(0,0,0,.72);
+      backdrop-filter:blur(7px);
+      -webkit-backdrop-filter:blur(7px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .17s ease;
+    }
+
+    .modal-backdrop.open{
+      opacity:1;
+      pointer-events:auto;
+    }
+
+    .modal{
+      width:min(560px,100%);
+      background:#0d0d0c;
+      border-radius:16px;
+      padding:20px;
+      box-shadow:0 28px 85px rgba(0,0,0,.55);
+      transform:translateY(8px) scale(.995);
+      transition:transform .18s var(--ease);
+    }
+
+    .modal.compact{width:min(430px,100%)}
+
+    .modal-backdrop.open .modal{transform:none}
+
+    .modal-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:18px;
+    }
+
+    .modal-kicker{
+      color:#69bdc7;
+      font-size:10px;
+      line-height:1.2;
+      font-weight:750;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .modal-title{
+      margin:4px 0 0;
+      color:#f3f3ef;
+      font-size:20px;
+      line-height:1.25;
+      font-weight:750;
+      letter-spacing:-.025em;
+    }
+
+    .close{
+      width:32px;
+      height:32px;
+      background:#121210;
+      color:#72726c;
+      border-radius:8px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .close:hover{
+      background:#181816;
+      color:#cfcfc8;
+    }
+
+    .field{margin-top:13px}
+
+    .field label{
+      display:block;
+      margin:0 0 7px 1px;
+      color:#787872;
+      font-size:10.5px;
+      font-weight:700;
+    }
+
+    .input,.textarea{
+      width:100%;
+      border:0;
+      outline:0;
+      color:#efefeb;
+      background:#141412;
+      border-radius:10px;
+      padding:12px 13px;
+      transition:background .15s ease;
+    }
+
+    .input::placeholder,.textarea::placeholder{color:#4e4e49}
+    .input:focus,.textarea:focus{background:#171715}
+
+    .textarea{
+      min-height:125px;
+      resize:vertical;
+      line-height:1.5;
+    }
+
+    .priority-picker{position:relative}
+
+    .priority-trigger{
+      width:100%;
+      height:44px;
+      border-radius:10px;
+      padding:0 12px;
+      background:#141412;
+      color:#e9e9e4;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      cursor:pointer;
+    }
+
+    .priority-trigger:hover{
+      background:#171715;
+      box-shadow:inset 0 0 0 1px #173136;
+    }
+
+    .priority-trigger-main{
+      display:flex;
+      align-items:center;
+      gap:9px;
+      min-width:0;
+    }
+
+    .priority-swatch{
+      width:9px;
+      height:9px;
+      border-radius:999px;
+      background:var(--priority-color);
+      flex:0 0 auto;
+    }
+
+    .priority-trigger-text{
+      font-size:13px;
+      font-weight:650;
+    }
+
+    .priority-menu{
+      position:absolute;
+      left:0;
+      right:0;
+      top:calc(100% + 7px);
+      z-index:10;
+      background:#151513;
+      border-radius:11px;
+      padding:5px;
+      box-shadow:0 18px 50px rgba(0,0,0,.42);
+      opacity:0;
+      transform:translateY(-5px) scale(.99);
+      transform-origin:top;
+      pointer-events:none;
+      transition:opacity .14s ease,transform .14s ease;
+    }
+
+    .priority-picker.open .priority-menu{
+      opacity:1;
+      transform:none;
+      pointer-events:auto;
+    }
+
+    .priority-option{
+      width:100%;
+      min-height:40px;
+      border-radius:8px;
+      background:transparent;
+      color:#d7d7d0;
+      padding:0 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      cursor:pointer;
+    }
+
+    .priority-option:hover{background:#1d1d1a}
+
+    .priority-option-left{
+      display:flex;
+      align-items:center;
+      gap:9px;
+    }
+
+    .priority-option-check{
+      color:#7f7f78;
+      opacity:0;
+    }
+
+    .priority-option.selected .priority-option-check{opacity:1}
+
+    .project-customizer{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:16px;
+      margin-top:14px;
+    }
+
+    .choice-section label{
+      display:block;
+      margin:0 0 8px 1px;
+      color:#787872;
+      font-size:10.5px;
+      font-weight:700;
+    }
+
+
+
+    .color-grid{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    .color-choice{
+      width:27px;
+      height:27px;
+      border-radius:8px;
+      padding:0;
+      background:var(--swatch);
+      cursor:pointer;
+      position:relative;
+      transition:transform .14s ease;
+    }
+
+    .color-choice:hover{transform:scale(1.08)}
+
+    .color-choice.selected::after{
+      content:"";
+      position:absolute;
+      inset:5px;
+      border-radius:4px;
+      box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.68);
+    }
+
+    .icon-grid{
+      display:grid;
+      grid-template-columns:repeat(10,1fr);
+      gap:10px 7px;
+      align-items:center;
+    }
+
+    .icon-choice{
+      position:relative;
+      height:28px;
+      padding:0;
+      background:transparent;
+      color:#666b68;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition:color .14s ease,transform .14s ease,opacity .14s ease;
+    }
+
+    .icon-choice:hover{
+      color:#d1d3ce;
+      transform:translateY(-1px);
+    }
+
+    .icon-choice.selected{
+      color:var(--selected-icon-color,var(--accent));
+      transform:scale(1.08);
+    }
+
+    .icon-choice.selected::after{
+      content:"";
+      position:absolute;
+      left:50%;
+      bottom:-2px;
+      width:3px;
+      height:3px;
+      border-radius:50%;
+      background:currentColor;
+      transform:translateX(-50%);
+    }
+
+    .icon-choice .icon{
+      width:16px;
+      height:16px;
+    }
+
+    .modal-actions{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-top:20px;
+    }
+
+    .action-group{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-left:auto;
+    }
+
+    .btn{
+      border:0;
+      border-radius:9px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-size:12.5px;
+      font-weight:700;
+      transition:background .15s ease,color .15s ease,transform .15s ease;
+    }
+
+    .btn:active{transform:scale(.98)}
+
+    .btn-primary{
+      background:var(--accent);
+      color:#041012;
+    }
+
+    .btn-primary:hover{background:#2fd2e2}
+
+    .btn-ghost{
+      background:#141412;
+      color:#777771;
+    }
+
+    .btn-ghost:hover{
+      background:#191917;
+      color:#bcbcb5;
+    }
+
+    .btn-danger{
+      background:transparent;
+      color:#8c4e54;
+      padding-inline:6px;
+    }
+
+    .btn-danger:hover{color:#c76a73}
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:20px;
+      z-index:160;
+      transform:translate(-50%,10px);
+      background:#171715;
+      color:#d9d9d3;
+      padding:9px 12px;
+      border-radius:9px;
+      box-shadow:0 12px 34px rgba(0,0,0,.35);
+      opacity:0;
+      pointer-events:none;
+      font-size:11.5px;
+      transition:opacity .16s ease,transform .16s ease;
+    }
+
+    .toast.show{
+      opacity:1;
+      transform:translate(-50%,0);
+    }
+
+    .mobile-scrim{
+      display:none;
+    }
+
+    @media(max-width:1120px){
+      .archive-filter-label{display:none}
+    }
+
+    @media(max-width:760px){
+      body{overflow-x:auto}
+
+      .workspace,
+      .workspace.sidebar-open{
+        grid-template-columns:var(--sidebar-collapsed) minmax(0,1fr);
+      }
+
+      .sidebar{
+        position:sticky;
+        left:0;
+        top:0;
+        height:100vh;
+        z-index:40;
+      }
+
+      .workspace.sidebar-open .sidebar{
+        position:fixed;
+        width:var(--sidebar-open);
+        left:0;
+        top:0;
+        bottom:0;
+        box-shadow:18px 0 50px rgba(0,0,0,.42);
+      }
+
+      .workspace.sidebar-open .mobile-scrim{
+        display:block;
+        position:fixed;
+        inset:0;
+        z-index:35;
+        background:rgba(0,0,0,.45);
+      }
+
+      .main{
+        min-width:max-content;
+      }
+
+      .board-header{
+        width:calc(100vw - var(--sidebar-collapsed));
+        padding:0 12px;
+        position:sticky;
+        left:var(--sidebar-collapsed);
+      }
+
+      .board-shell{
+        width:max-content;
+        min-width:calc(100vw - var(--sidebar-collapsed));
+        grid-template-columns:max-content 44px;
+        padding:0 0 18px 12px;
+      }
+
+      .board{
+        width:max-content;
+        min-width:calc(100vw - var(--sidebar-collapsed) - 46px);
+        min-height:calc(100vh - var(--header-h) - 18px);
+        grid-template-columns:none !important;
+        grid-auto-flow:column;
+        grid-auto-columns:minmax(280px,82vw);
+      }
+
+      .column{
+        min-width:280px;
+        width:82vw;
+        min-height:calc(100vh - var(--header-h) - 18px);
+        padding:0 14px 18px;
+      }
+
+      .column:first-child{padding-left:0}
+      .task-list{min-height:calc(100vh - var(--header-h) - 82px)}
+
+      .edge-add{
+        position:sticky;
+        right:0;
+        min-height:calc(100vh - var(--header-h) - 18px);
+        background:var(--bg);
+        z-index:6;
+      }
+
+      .drag-handle{
+        width:18px;
+        opacity:.72;
+      }
+
+      .icon-grid{grid-template-columns:repeat(8,1fr)}
+    }
+  </style>
+</head>
+<body>
+  <div class="workspace" id="workspace">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-inner">
+        <div class="sidebar-top">
+          <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Open projects"></button>
+        </div>
+
+        <div class="sidebar-rail-actions" id="sidebarRailActions">
+          <button class="rail-action meta-rail-action" id="metaRailButton" type="button" aria-label="Abrir Metakanban"></button>
+          <button class="rail-action" id="newRailProject" type="button" aria-label="Crear nuevo kanban"></button>
+        </div>
+
+        <div class="sidebar-content">
+          <div class="project-row meta-row" id="metaProjectRow" style="--project-color:var(--accent)">
+            <div class="project-icon" id="metaSidebarIcon"></div>
+            <button class="project-name" id="metaProjectButton" type="button">Metakanban</button>
+          </div>
+          <div class="meta-separator"></div>
+
+          <div class="sidebar-label">Proyectos</div>
+          <div class="project-list" id="projectList"></div>
+
+          <button class="new-project" id="newProject" type="button"></button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="board-header">
+        <div class="current-project-icon" id="currentProjectIcon"></div>
+        <h1 class="current-title" id="currentTitle"></h1>
+        <div class="header-spacer"></div>
+      </header>
+
+      <section class="board-shell" id="boardShell" aria-label="Kanban board">
+        <div class="board" id="board"></div>
+        <button class="edge-add" id="edgeAction" type="button" aria-label="Add column"></button>
+      </section>
+    </main>
+
+    <div class="mobile-scrim" id="mobileScrim"></div>
+  </div>
+
+  <!-- Task dialog -->
+  <div class="modal-backdrop" id="taskModalBackdrop" aria-hidden="true">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+      <div class="modal-head">
+        <div>
+          <div class="modal-kicker" id="taskModalKicker">Nueva tarea</div>
+          <h2 class="modal-title" id="taskModalTitle">Add task</h2>
+        </div>
+        <button class="close" id="closeTaskModal" type="button" aria-label="Close"></button>
+      </div>
+
+      <form id="taskForm">
+        <div class="field">
+          <label for="taskTitle">Título</label>
+          <input class="input" id="taskTitle" maxlength="100" placeholder="¿Qué hay que hacer?" required />
+        </div>
+
+        <div class="field">
+          <label for="taskDescription">Descripción</label>
+          <textarea class="textarea" id="taskDescription" maxlength="900" placeholder="Añade contexto"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Prioridad</label>
+          <div class="priority-picker" id="priorityPicker">
+            <button class="priority-trigger" id="priorityTrigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span class="priority-trigger-main">
+                <span class="priority-swatch" id="prioritySwatch"></span>
+                <span class="priority-trigger-text" id="priorityText">Media</span>
+              </span>
+              <span id="priorityChevron"></span>
+            </button>
+
+            <div class="priority-menu" role="listbox" aria-label="Priority">
+              <button class="priority-option" type="button" data-priority="low" role="option">
+                <span class="priority-option-left"><span class="priority-swatch" style="--priority-color:var(--low)"></span><span>Baja</span></span>
+                <span class="priority-option-check"></span>
+              </button>
+              <button class="priority-option" type="button" data-priority="medium" role="option">
+                <span class="priority-option-left"><span class="priority-swatch" style="--priority-color:var(--medium)"></span><span>Media</span></span>
+                <span class="priority-option-check"></span>
+              </button>
+              <button class="priority-option" type="button" data-priority="high" role="option">
+                <span class="priority-option-left"><span class="priority-swatch" style="--priority-color:var(--high)"></span><span>Alta</span></span>
+                <span class="priority-option-check"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="deleteTask" hidden>Eliminar</button>
+          <div class="action-group">
+            <button type="button" class="btn btn-ghost" id="cancelTaskModal">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="saveTask">Crear tarea</button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <!-- Project dialog -->
+  <div class="modal-backdrop" id="projectModalBackdrop" aria-hidden="true">
+    <section class="modal compact" role="dialog" aria-modal="true" aria-labelledby="projectModalTitle">
+      <div class="modal-head">
+        <div>
+          <div class="modal-kicker" id="projectModalKicker">Proyecto</div>
+          <h2 class="modal-title" id="projectModalTitle">Edit project</h2>
+        </div>
+        <button class="close" id="closeProjectModal" type="button" aria-label="Close"></button>
+      </div>
+
+      <form id="projectForm">
+        <div class="field">
+          <label for="projectName">Nombre</label>
+          <input class="input" id="projectName" maxlength="40" placeholder="Nombre del proyecto" required />
+        </div>
+
+        <div class="project-customizer">
+          <div class="choice-section">
+            <label>Color</label>
+            <div class="color-grid" id="colorGrid"></div>
+          </div>
+
+          <div class="choice-section">
+            <label>Icono</label>
+            <div class="icon-grid" id="iconGrid"></div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <div></div>
+          <div class="action-group">
+            <button type="button" class="btn btn-ghost" id="cancelProjectModal">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="saveProject">Save</button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const STORAGE_KEY = "kanban-demo-es-v17";
+    const META_ID = "__metakanban__";
+    const ARCHIVE_AFTER_MS = 15 * 24 * 60 * 60 * 1000;
+
+    const icons = {
+      plus:`<svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>`,
+      x:`<svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>`,
+      clock:`<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>`,
+      grip:`<svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="7" r="1"></circle><circle cx="15" cy="7" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="9" cy="17" r="1"></circle><circle cx="15" cy="17" r="1"></circle></svg>`,
+      chevron:`<svg class="icon" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></svg>`,
+      down:`<svg class="icon" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"></path></svg>`,
+      check:`<svg class="icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"></path></svg>`,
+      archive:`<svg class="icon" viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path></svg>`,
+      unarchive:`<svg class="icon" viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="m9 15 3-3 3 3"></path><path d="M12 12v6"></path></svg>`,
+      trash:`<svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="m19 6-1 14H6L5 6"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></svg>`,
+      more:`<svg class="icon" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg>`,
+      folder:`<svg class="icon" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path></svg>`,
+      code:`<svg class="icon" viewBox="0 0 24 24"><path d="m8 9-4 3 4 3"></path><path d="m16 9 4 3-4 3"></path><path d="m14 5-4 14"></path></svg>`,
+      sparkles:`<svg class="icon" viewBox="0 0 24 24"><path d="m12 3-1.4 3.6L7 8l3.6 1.4L12 13l1.4-3.6L17 8l-3.6-1.4Z"></path><path d="m5 15-.8 2.2L2 18l2.2.8L5 21l.8-2.2L8 18l-2.2-.8Z"></path><path d="m19 13-.8 2.2L16 16l2.2.8L19 19l.8-2.2L22 16l-2.2-.8Z"></path></svg>`,
+      layers:`<svg class="icon" viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5Z"></path><path d="m3 12 9 5 9-5"></path><path d="m3 17 9 5 9-5"></path></svg>`,
+      target:`<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg>`,
+      bolt:`<svg class="icon" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7Z"></path></svg>`,
+      globe:`<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a15 15 0 0 1 0 18"></path><path d="M12 3a15 15 0 0 0 0 18"></path></svg>`,
+      briefcase:`<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M3 12h18"></path></svg>`,
+      book:`<svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"></path></svg>`,
+      box:`<svg class="icon" viewBox="0 0 24 24"><path d="m21 8-9 5-9-5"></path><path d="m3 8 9-5 9 5v8l-9 5-9-5Z"></path><path d="M12 13v8"></path></svg>`,
+      palette:`<svg class="icon" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0 0 18h1.5a1.5 1.5 0 0 0 0-3H12a2 2 0 0 1 0-4h3a6 6 0 0 0 0-12Z"></path><circle cx="7.5" cy="10.5" r=".5"></circle><circle cx="9.5" cy="6.5" r=".5"></circle><circle cx="14.5" cy="6.5" r=".5"></circle></svg>`,
+      network:`<svg class="icon" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="6" rx="1"></rect><rect x="2" y="16" width="6" height="6" rx="1"></rect><rect x="16" y="16" width="6" height="6" rx="1"></rect><path d="M12 8v4"></path><path d="M5 16v-2h14v2"></path></svg>`,
+      calendar:`<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4"></path><path d="M8 3v4"></path><path d="M3 10h18"></path></svg>`,
+      rocket:`<svg class="icon" viewBox="0 0 24 24"><path d="M4.5 16.5 3 21l4.5-1.5"></path><path d="M9 15 5 11l5-5c3-3 7-4 11-3-1 4-2 8-5 11l-5 5-4-4"></path><circle cx="15" cy="9" r="2"></circle></svg>`,
+      database:`<svg class="icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"></path><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path></svg>`,
+      terminal:`<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="m7 9 3 3-3 3"></path><path d="M13 15h4"></path></svg>`,
+      chart:`<svg class="icon" viewBox="0 0 24 24"><path d="M4 19V9"></path><path d="M10 19V5"></path><path d="M16 19v-7"></path><path d="M22 19V3"></path></svg>`,
+      wrench:`<svg class="icon" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5 5L3 18l3 3 6.7-6.7a4 4 0 0 0 5-5l-2.4 2.4-3-3Z"></path></svg>`,
+      shield:`<svg class="icon" viewBox="0 0 24 24"><path d="M12 3 20 6v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6Z"></path></svg>`,
+      heart:`<svg class="icon" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"></path></svg>`,
+      star:`<svg class="icon" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2 7.5 14 3 9.6l6.2-.9Z"></path></svg>`,
+      music:`<svg class="icon" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="17" cy="16" r="3"></circle></svg>`,
+      camera:`<svg class="icon" viewBox="0 0 24 24"><path d="M14.5 5 13 3h-2L9.5 5H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"></path><circle cx="12" cy="12" r="4"></circle></svg>`,
+      plane:`<svg class="icon" viewBox="0 0 24 24"><path d="M22 2 9 15"></path><path d="m22 2-8 20-5-7-7-5Z"></path></svg>`,
+      home:`<svg class="icon" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg>`,
+      bot:`<svg class="icon" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="13" rx="3"></rect><path d="M12 3v4"></path><circle cx="9" cy="13" r="1"></circle><circle cx="15" cy="13" r="1"></circle><path d="M9 17h6"></path></svg>`,
+      cpu:`<svg class="icon" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1"></rect><path d="M9 1v3"></path><path d="M15 1v3"></path><path d="M9 20v3"></path><path d="M15 20v3"></path><path d="M20 9h3"></path><path d="M20 14h3"></path><path d="M1 9h3"></path><path d="M1 14h3"></path></svg>`,
+      server:`<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"></rect><rect x="3" y="14" width="18" height="6" rx="2"></rect><path d="M7 7h.01"></path><path d="M7 17h.01"></path></svg>`,
+      flask:`<svg class="icon" viewBox="0 0 24 24"><path d="M9 3h6"></path><path d="M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"></path><path d="M8 15h8"></path></svg>`,
+      gamepad:`<svg class="icon" viewBox="0 0 24 24"><path d="M8 8h8a5 5 0 0 1 4.8 6.4l-1.2 4A2 2 0 0 1 16 19l-2-2h-4l-2 2a2 2 0 0 1-3.6-.6l-1.2-4A5 5 0 0 1 8 8Z"></path><path d="M7 12v4"></path><path d="M5 14h4"></path><path d="M16 13h.01"></path><path d="M18 15h.01"></path></svg>`,
+      phone:`<svg class="icon" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>`,
+      mail:`<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>`,
+      map:`<svg class="icon" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z"></path><path d="M9 3v15"></path><path d="M15 6v15"></path></svg>`,
+      cart:`<svg class="icon" viewBox="0 0 24 24"><path d="M3 3h2l2.4 10.2a2 2 0 0 0 2 1.6H18a2 2 0 0 0 2-1.6L21 7H6"></path><circle cx="10" cy="20" r="1"></circle><circle cx="18" cy="20" r="1"></circle></svg>`,
+      panelOpen:`<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path><path d="m14 9 3 3-3 3"></path></svg>`,
+      panelClose:`<svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path><path d="m17 9-3 3 3 3"></path></svg>`
+
+    };
+
+    const PROJECT_ICONS = ["folder","layers","network","code","terminal","database","server","cpu","bot","sparkles","target","rocket","bolt","globe","map","plane","briefcase","calendar","chart","wrench","shield","book","box","palette","star","heart","music","camera","gamepad","phone","mail","cart","home","flask"];
+    const PROJECT_COLORS = [
+      "#17c7d9","#4ea1ff","#756eff","#b06cff","#e66dc2",
+      "#ff657d","#ff8b4a","#ffc44d","#75c66d","#38b795"
+    ];
+
+    const now = Date.now();
+
+    function makeBoard(id,name,icon,color,taskSeed=[]){
+      return {
+        id,name,icon,color,
+        columns:[
+          {id:`${id}-backlog`,title:"Backlog",isDone:false,isProgress:false,isBacklog:true},
+          {id:`${id}-progress`,title:"Progress",isDone:false,isProgress:true,isBacklog:false},
+          {id:`${id}-done`,title:"Done",isDone:true,isProgress:false,isBacklog:false}
+        ],
+        tasks:taskSeed
+      };
+    }
+
+    const starterWorkspace = {
+      activeBoardId:"__metakanban__",
+      boards:[
+        makeBoard("saas","Plataforma SaaS","layers","#17c7d9",[
+          {id:"saas-t1",columnId:"saas-backlog",title:"Definir permisos por rol",description:"Matriz de permisos para administradores, editores y usuarios de solo lectura.",priority:"high",enteredAt:now-75*60*1000,archived:false,archivedAt:null},
+          {id:"saas-t2",columnId:"saas-backlog",title:"Importación masiva de clientes",description:"Permitir cargar CSV y mostrar errores por fila antes de confirmar.",priority:"medium",enteredAt:now-320*60*1000,archived:false,archivedAt:null},
+          {id:"saas-t3",columnId:"saas-backlog",title:"Plantillas de notificaciones",description:"Preparar plantillas reutilizables para correo y avisos internos.",priority:"low",enteredAt:now-1440*60*1000,archived:false,archivedAt:null},
+          {id:"saas-t4",columnId:"saas-progress",title:"Nuevo panel de actividad",description:"Unificar actividad reciente, comentarios y cambios relevantes en una sola vista.",priority:"high",enteredAt:now-48*60*1000,archived:false,archivedAt:null},
+          {id:"saas-t5",columnId:"saas-progress",title:"Búsqueda global",description:"Indexar proyectos, tareas y clientes con navegación rápida por teclado.",priority:"medium",enteredAt:now-190*60*1000,archived:false,archivedAt:null},
+          {id:"saas-t6",columnId:"saas-done",title:"Sistema de etiquetas",description:"Etiquetas personalizadas con filtros y colores por espacio de trabajo.",priority:"medium",enteredAt:now-800*60*1000,archived:false,archivedAt:null},
+          {id:"saas-t7",columnId:"saas-done",title:"Exportación CSV",description:"Exportar listados respetando filtros activos y orden de columnas.",priority:"low",enteredAt:now-1300*60*1000,archived:false,archivedAt:null},
+          {id:"saas-t8",columnId:"saas-done",title:"Atajos de teclado",description:"Añadir atajos para crear, buscar y navegar entre proyectos.",priority:"low",enteredAt:now-2300*60*1000,archived:false,archivedAt:null}
+        ]),
+        makeBoard("mobile","Aplicación móvil","phone","#4ea1ff",[
+          {id:"mobile-t1",columnId:"mobile-backlog",title:"Modo sin conexión",description:"Cachear los últimos proyectos abiertos y sincronizar cambios al recuperar red.",priority:"high",enteredAt:now-160*60*1000,archived:false,archivedAt:null},
+          {id:"mobile-t2",columnId:"mobile-backlog",title:"Acceso biométrico",description:"Desbloqueo con Face ID o huella después del primer inicio de sesión.",priority:"medium",enteredAt:now-520*60*1000,archived:false,archivedAt:null},
+          {id:"mobile-t3",columnId:"mobile-backlog",title:"Compartir tarea",description:"Generar enlace interno desde la hoja de compartir del sistema.",priority:"low",enteredAt:now-900*60*1000,archived:false,archivedAt:null},
+          {id:"mobile-t4",columnId:"mobile-progress",title:"Navegación principal",description:"Ajustar gestos, transiciones y jerarquía de pantallas en móvil.",priority:"high",enteredAt:now-35*60*1000,archived:false,archivedAt:null},
+          {id:"mobile-t5",columnId:"mobile-progress",title:"Notificaciones push",description:"Agrupar notificaciones por proyecto y evitar duplicados.",priority:"medium",enteredAt:now-260*60*1000,archived:false,archivedAt:null},
+          {id:"mobile-t6",columnId:"mobile-done",title:"Login persistente",description:"Mantener sesión de forma segura y renovar credenciales cuando sea necesario.",priority:"medium",enteredAt:now-1100*60*1000,archived:false,archivedAt:null},
+          {id:"mobile-t7",columnId:"mobile-done",title:"Vista compacta de tarjetas",description:"Optimizar densidad para pantallas pequeñas sin perder legibilidad.",priority:"low",enteredAt:now-1780*60*1000,archived:false,archivedAt:null}
+        ]),
+        makeBoard("infra","Infraestructura","server","#756eff",[
+          {id:"infra-t1",columnId:"infra-backlog",title:"Política de backups",description:"Definir retención diaria, semanal y mensual con restauración documentada.",priority:"high",enteredAt:now-210*60*1000,archived:false,archivedAt:null},
+          {id:"infra-t2",columnId:"infra-backlog",title:"Entorno de staging",description:"Separar datos y secretos del entorno de producción.",priority:"medium",enteredAt:now-620*60*1000,archived:false,archivedAt:null},
+          {id:"infra-t3",columnId:"infra-progress",title:"Observabilidad",description:"Centralizar métricas de API, workers y base de datos con alertas útiles.",priority:"high",enteredAt:now-82*60*1000,archived:false,archivedAt:null},
+          {id:"infra-t4",columnId:"infra-progress",title:"Pipeline de despliegue",description:"Automatizar validaciones, migraciones y rollback de cada versión.",priority:"high",enteredAt:now-305*60*1000,archived:false,archivedAt:null},
+          {id:"infra-t5",columnId:"infra-done",title:"HTTPS automático",description:"Renovación automática de certificados y redirección de tráfico inseguro.",priority:"medium",enteredAt:now-1400*60*1000,archived:false,archivedAt:null},
+          {id:"infra-t6",columnId:"infra-done",title:"Health checks",description:"Comprobaciones de salud para backend y dependencias críticas.",priority:"low",enteredAt:now-2100*60*1000,archived:false,archivedAt:null},
+          {id:"infra-t7",columnId:"infra-done",title:"Rotación de logs",description:"Limitar tamaño y retención para evitar crecimiento indefinido.",priority:"low",enteredAt:now-2700*60*1000,archived:false,archivedAt:null}
+        ]),
+        makeBoard("bi","Analítica y BI","chart","#38b795",[
+          {id:"bi-t1",columnId:"bi-backlog",title:"Modelo de métricas de negocio",description:"Acordar definiciones únicas para activación, retención y conversión.",priority:"high",enteredAt:now-65*60*1000,archived:false,archivedAt:null},
+          {id:"bi-t2",columnId:"bi-backlog",title:"Dashboard ejecutivo",description:"Resumen semanal con adquisición, uso, ingresos y churn.",priority:"medium",enteredAt:now-300*60*1000,archived:false,archivedAt:null},
+          {id:"bi-t3",columnId:"bi-backlog",title:"Cohortes de retención",description:"Comparar cohortes por mes de alta y canal de adquisición.",priority:"medium",enteredAt:now-720*60*1000,archived:false,archivedAt:null},
+          {id:"bi-t4",columnId:"bi-backlog",title:"Calidad de datos",description:"Añadir tests sobre nulos, duplicados y retrasos de carga.",priority:"high",enteredAt:now-1080*60*1000,archived:false,archivedAt:null},
+          {id:"bi-t5",columnId:"bi-done",title:"Diccionario de eventos",description:"Documentar eventos de producto y propiedades utilizadas por analítica.",priority:"low",enteredAt:now-1700*60*1000,archived:false,archivedAt:null},
+          {id:"bi-t6",columnId:"bi-done",title:"Tabla calendario",description:"Dimensión temporal común para todos los modelos de reporting.",priority:"low",enteredAt:now-2500*60*1000,archived:false,archivedAt:null}
+        ]),
+        makeBoard("launch","Lanzamiento comercial","rocket","#ff8b4a",[
+          {id:"launch-t1",columnId:"launch-backlog",title:"Caso de éxito inicial",description:"Preparar una historia breve con problema, solución y resultado medible.",priority:"medium",enteredAt:now-140*60*1000,archived:false,archivedAt:null},
+          {id:"launch-t2",columnId:"launch-backlog",title:"Kit comercial",description:"Unificar presentación, demo, precios y respuestas a objeciones frecuentes.",priority:"high",enteredAt:now-450*60*1000,archived:false,archivedAt:null},
+          {id:"launch-t3",columnId:"launch-backlog",title:"Calendario de contenidos",description:"Planificar cuatro semanas de publicaciones y piezas de apoyo.",priority:"low",enteredAt:now-780*60*1000,archived:false,archivedAt:null},
+          {id:"launch-t4",columnId:"launch-progress",title:"Landing de lanzamiento",description:"Cerrar copy, capturas y llamadas a la acción de la página principal.",priority:"high",enteredAt:now-52*60*1000,archived:false,archivedAt:null},
+          {id:"launch-t5",columnId:"launch-progress",title:"Secuencia de emails",description:"Preparar bienvenida, activación y seguimiento para nuevos registros.",priority:"medium",enteredAt:now-180*60*1000,archived:false,archivedAt:null},
+          {id:"launch-t6",columnId:"launch-done",title:"Definición de precios",description:"Cerrar planes, límites y condiciones de la oferta inicial.",priority:"high",enteredAt:now-1250*60*1000,archived:false,archivedAt:null},
+          {id:"launch-t7",columnId:"launch-done",title:"Lista de prospectos",description:"Segmentar primeras cuentas objetivo por tamaño y necesidad.",priority:"medium",enteredAt:now-1900*60*1000,archived:false,archivedAt:null}
+        ]),
+        makeBoard("automation","Automatización interna","bot","#75c66d",[
+          {id:"automation-t1",columnId:"automation-backlog",title:"Clasificar tickets automáticamente",description:"Etiquetar solicitudes por producto, urgencia y equipo responsable.",priority:"medium",enteredAt:now-115*60*1000,archived:false,archivedAt:null},
+          {id:"automation-t2",columnId:"automation-backlog",title:"Resumen diario de incidencias",description:"Generar un resumen de los tickets críticos abiertos y bloqueos.",priority:"low",enteredAt:now-360*60*1000,archived:false,archivedAt:null},
+          {id:"automation-t3",columnId:"automation-backlog",title:"Alta automática de clientes",description:"Crear recursos internos cuando se confirma una nueva cuenta.",priority:"high",enteredAt:now-690*60*1000,archived:false,archivedAt:null},
+          {id:"automation-t4",columnId:"automation-backlog",title:"Aviso de SLA",description:"Alertar antes de que una solicitud supere el tiempo objetivo.",priority:"high",enteredAt:now-980*60*1000,archived:false,archivedAt:null},
+          {id:"automation-t5",columnId:"automation-done",title:"Sincronización CRM",description:"Actualizar empresa y contacto al cambiar datos en el producto.",priority:"medium",enteredAt:now-1600*60*1000,archived:false,archivedAt:null},
+          {id:"automation-t6",columnId:"automation-done",title:"Limpieza de adjuntos temporales",description:"Eliminar automáticamente ficheros huérfanos con más de 30 días.",priority:"low",enteredAt:now-2600*60*1000,archived:false,archivedAt:null}
+        ]),
+        makeBoard("ux","Rediseño UX","palette","#e66dc2",[
+          {id:"ux-t1",columnId:"ux-backlog",title:"Estados vacíos",description:"Diseñar mensajes y acciones útiles para pantallas sin contenido.",priority:"low",enteredAt:now-95*60*1000,archived:false,archivedAt:null},
+          {id:"ux-t2",columnId:"ux-backlog",title:"Accesibilidad de formularios",description:"Revisar foco, etiquetas, contraste y mensajes de error.",priority:"high",enteredAt:now-400*60*1000,archived:false,archivedAt:null},
+          {id:"ux-t3",columnId:"ux-progress",title:"Sistema de componentes",description:"Consolidar botones, campos, modales y espaciado en componentes comunes.",priority:"high",enteredAt:now-70*60*1000,archived:false,archivedAt:null},
+          {id:"ux-t4",columnId:"ux-progress",title:"Flujo de creación de proyecto",description:"Reducir pasos y mejorar elección inicial de icono y color.",priority:"medium",enteredAt:now-240*60*1000,archived:false,archivedAt:null},
+          {id:"ux-t5",columnId:"ux-done",title:"Escala tipográfica",description:"Definir tamaños y pesos utilizados en escritorio y móvil.",priority:"low",enteredAt:now-1450*60*1000,archived:false,archivedAt:null},
+          {id:"ux-t6",columnId:"ux-done",title:"Tokens de color",description:"Centralizar colores base, estados y prioridades.",priority:"medium",enteredAt:now-2000*60*1000,archived:false,archivedAt:null},
+          {id:"ux-t7",columnId:"ux-done",title:"Iconografía",description:"Unificar familia y tamaños de iconos en toda la interfaz.",priority:"low",enteredAt:now-3300*60*1000,archived:false,archivedAt:null}
+        ]),
+        makeBoard("docs","Documentación","book","#ffc44d",[
+          {id:"docs-t1",columnId:"docs-done",title:"Guía de instalación",description:"Documentar requisitos, variables de entorno y primer arranque.",priority:"medium",enteredAt:now-900*60*1000,archived:false,archivedAt:null},
+          {id:"docs-t2",columnId:"docs-done",title:"Guía de usuarios",description:"Explicar proyectos, columnas, tareas, prioridades y archivado.",priority:"medium",enteredAt:now-1200*60*1000,archived:false,archivedAt:null},
+          {id:"docs-t3",columnId:"docs-done",title:"Referencia de API",description:"Documentar endpoints, ejemplos y respuestas de error.",priority:"high",enteredAt:now-1700*60*1000,archived:false,archivedAt:null},
+          {id:"docs-t4",columnId:"docs-done",title:"Runbook de incidencias",description:"Pasos básicos para diagnosticar problemas de servicio y base de datos.",priority:"high",enteredAt:now-2500*60*1000,archived:false,archivedAt:null},
+          {id:"docs-t5",columnId:"docs-done",title:"Convenciones de desarrollo",description:"Formato, ramas, commits, revisiones y despliegues.",priority:"low",enteredAt:now-3600*60*1000,archived:false,archivedAt:null}
+        ]),
+        makeBoard("ai","Investigación IA","flask","#b06cff",[
+          {id:"ai-t1",columnId:"ai-backlog",title:"Evaluar modelos pequeños",description:"Comparar coste, latencia y calidad en tareas de clasificación.",priority:"medium",enteredAt:now-220*60*1000,archived:false,archivedAt:null},
+          {id:"ai-t2",columnId:"ai-backlog",title:"Dataset de evaluación",description:"Preparar ejemplos representativos y casos límite reales.",priority:"high",enteredAt:now-500*60*1000,archived:false,archivedAt:null},
+          {id:"ai-t3",columnId:"ai-progress",title:"Asistente de proyecto",description:"Prototipo que resume estado y propone próximos pasos a partir del kanban.",priority:"high",enteredAt:now-44*60*1000,archived:false,archivedAt:null},
+          {id:"ai-t4",columnId:"ai-progress",title:"Extracción estructurada",description:"Convertir texto libre en tareas con título, descripción y prioridad.",priority:"medium",enteredAt:now-310*60*1000,archived:false,archivedAt:null},
+          {id:"ai-t5",columnId:"ai-done",title:"Prueba de embeddings",description:"Validar búsqueda semántica sobre documentación interna.",priority:"low",enteredAt:now-1550*60*1000,archived:false,archivedAt:null},
+          {id:"ai-t6",columnId:"ai-done",title:"Política de datos",description:"Definir qué información puede enviarse a proveedores externos.",priority:"high",enteredAt:now-2200*60*1000,archived:false,archivedAt:null}
+        ]),
+        makeBoard("portal","Portal de clientes","globe","#2ea8ff",[
+          {id:"portal-t1",columnId:"portal-backlog",title:"Área de facturación",description:"Mostrar facturas, método de pago y datos fiscales.",priority:"high",enteredAt:now-130*60*1000,archived:false,archivedAt:null},
+          {id:"portal-t2",columnId:"portal-backlog",title:"Gestión de usuarios",description:"Permitir invitar, desactivar y cambiar roles dentro de una cuenta.",priority:"medium",enteredAt:now-410*60*1000,archived:false,archivedAt:null},
+          {id:"portal-t3",columnId:"portal-backlog",title:"Historial de soporte",description:"Mostrar conversaciones y estado de solicitudes abiertas.",priority:"medium",enteredAt:now-760*60*1000,archived:false,archivedAt:null},
+          {id:"portal-t4",columnId:"portal-backlog",title:"Preferencias de comunicación",description:"Elegir qué avisos recibe cada usuario y por qué canal.",priority:"low",enteredAt:now-1200*60*1000,archived:false,archivedAt:null},
+          {id:"portal-t5",columnId:"portal-done",title:"Página de perfil",description:"Edición de nombre, foto, idioma y zona horaria.",priority:"low",enteredAt:now-1900*60*1000,archived:false,archivedAt:null}
+        ])
+      ]
+    };
+
+    let appState = loadWorkspace();
+    let boardState = getActiveBoard();
+    let sidebarOpen = false;
+    let showArchived = false;
+
+    let editingTaskId = null;
+    let creatingColumnId = null;
+    let selectedPriority = "medium";
+
+    let editingProjectId = null;
+    let projectModalMode = "edit";
+    let selectedProjectIcon = "folder";
+    let selectedProjectColor = PROJECT_COLORS[0];
+
+    let draggingTaskId = null;
+    let draggingTaskEl = null;
+    let originalTaskColumnId = null;
+    let taskDropCommitted = false;
+
+    let draggingColumnId = null;
+    let draggingColumnEl = null;
+    let columnDropCommitted = false;
+    let draggedColumnCanDelete = false;
+
+    let suppressTaskClick = false;
+    let touchTaskDrag = null;
+    let touchColumnDrag = null;
+
+    const workspace = document.getElementById("workspace");
+    const projectList = document.getElementById("projectList");
+    const board = document.getElementById("board");
+    const boardShell = document.getElementById("boardShell");
+    const edgeAction = document.getElementById("edgeAction");
+    const currentTitle = document.getElementById("currentTitle");
+    const currentProjectIcon = document.getElementById("currentProjectIcon");
+    const metaProjectRow = document.getElementById("metaProjectRow");
+    const metaProjectButton = document.getElementById("metaProjectButton");
+
+    const taskModalBackdrop = document.getElementById("taskModalBackdrop");
+    const taskForm = document.getElementById("taskForm");
+    const taskTitle = document.getElementById("taskTitle");
+    const taskDescription = document.getElementById("taskDescription");
+    const taskModalKicker = document.getElementById("taskModalKicker");
+    const taskModalTitle = document.getElementById("taskModalTitle");
+    const saveTask = document.getElementById("saveTask");
+    const deleteTask = document.getElementById("deleteTask");
+    const priorityPicker = document.getElementById("priorityPicker");
+    const priorityTrigger = document.getElementById("priorityTrigger");
+    const prioritySwatch = document.getElementById("prioritySwatch");
+    const priorityText = document.getElementById("priorityText");
+
+    const projectModalBackdrop = document.getElementById("projectModalBackdrop");
+    const projectForm = document.getElementById("projectForm");
+    const projectModalKicker = document.getElementById("projectModalKicker");
+    const projectModalTitle = document.getElementById("projectModalTitle");
+    const projectName = document.getElementById("projectName");
+    const colorGrid = document.getElementById("colorGrid");
+    const iconGrid = document.getElementById("iconGrid");
+
+    const toast = document.getElementById("toast");
+
+    document.getElementById("sidebarToggle").innerHTML = icons.panelOpen;
+    document.getElementById("metaSidebarIcon").innerHTML = icons.network;
+    document.getElementById("metaRailButton").innerHTML = icons.network;
+    document.getElementById("newRailProject").innerHTML = icons.plus;
+    document.getElementById("newProject").innerHTML = `${icons.plus}<span>Nuevo kanban</span>`;
+    document.getElementById("closeTaskModal").innerHTML = icons.x;
+    document.getElementById("closeProjectModal").innerHTML = icons.x;
+    document.getElementById("priorityChevron").innerHTML = icons.down;
+    document.querySelectorAll(".priority-option-check").forEach(el => el.innerHTML = icons.check);
+    setEdgeAddMode();
+
+    function loadWorkspace(){
+      try{
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if(saved?.boards?.length && saved.activeBoardId) return saved;
+      }catch(e){}
+      return structuredClone(starterWorkspace);
+    }
+
+    function persistWorkspace(){
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(appState));
+    }
+
+    function getActiveBoard(){
+      if(appState.activeBoardId === META_ID) return null;
+
+      let active = appState.boards.find(b => b.id === appState.activeBoardId);
+      if(!active){
+        active = appState.boards[0];
+        appState.activeBoardId = active?.id || META_ID;
+      }
+      return active;
+    }
+
+    function normalizeWorkspace(){
+      appState.boards.forEach(b => {
+        b.icon = PROJECT_ICONS.includes(b.icon) ? b.icon : "folder";
+        b.color = b.color || PROJECT_COLORS[0];
+        b.columns = Array.isArray(b.columns) ? b.columns : [];
+        b.tasks = Array.isArray(b.tasks) ? b.tasks : [];
+
+        b.columns.forEach(c => {
+          c.isDone = Boolean(c.isDone);
+          c.isProgress = Boolean(c.isProgress);
+          c.isBacklog = Boolean(c.isBacklog);
+        });
+
+        if(!b.columns.some(c => c.isProgress)){
+          const inferred =
+            b.columns.find(c => c.title.trim().toLowerCase() === "progress") ||
+            b.columns.find((c,index) => index === 1 && !c.isDone);
+          if(inferred) inferred.isProgress = true;
+        }
+
+        if(!b.columns.some(c => c.isBacklog)){
+          const inferredBacklog =
+            b.columns.find(c => c.title.trim().toLowerCase() === "backlog") ||
+            b.columns.find(c => !c.isDone && !c.isProgress);
+          if(inferredBacklog) inferredBacklog.isBacklog = true;
+        }
+
+        b.tasks.forEach(t => {
+          t.enteredAt = Number(t.enteredAt || Date.now());
+          t.archived = Boolean(t.archived);
+        });
+      });
+    }
+
+    function renderAll(){
+      boardState = getActiveBoard();
+      autoArchiveAllBoards();
+      renderSidebar();
+      renderHeader();
+
+      if(appState.activeBoardId === META_ID){
+        renderMetaBoard();
+      }else{
+        renderBoard();
+      }
+    }
+
+    function renderSidebar(){
+      projectList.innerHTML = "";
+      metaProjectRow.classList.toggle("active",appState.activeBoardId === META_ID);
+
+      appState.boards.forEach(project => {
+        const row = document.createElement("div");
+        row.className = `project-row${project.id === appState.activeBoardId ? " active" : ""}`;
+        row.style.setProperty("--project-color",project.color);
+
+        const icon = document.createElement("div");
+        icon.className = "project-icon";
+        icon.innerHTML = icons[project.icon] || icons.folder;
+
+        const name = document.createElement("button");
+        name.type = "button";
+        name.className = "project-name";
+        name.textContent = project.name;
+        name.addEventListener("click",() => switchProject(project.id));
+
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.className = "project-edit";
+        edit.setAttribute("aria-label",`Edit ${project.name}`);
+        edit.innerHTML = icons.more;
+        edit.addEventListener("click",event => {
+          event.stopPropagation();
+          openProjectEditor(project.id);
+        });
+
+        row.addEventListener("click",event => {
+          if(event.target.closest(".project-edit")) return;
+          switchProject(project.id);
+        });
+
+        row.append(icon,name,edit);
+        projectList.appendChild(row);
+      });
+    }
+
+    function renderHeader(){
+      if(appState.activeBoardId === META_ID){
+        currentTitle.textContent = "Metakanban";
+        currentProjectIcon.style.setProperty("--project-color","var(--accent)");
+        currentProjectIcon.innerHTML = icons.network;
+        currentProjectIcon.style.cursor = "default";
+        currentTitle.style.cursor = "default";
+        return;
+      }
+
+      if(!boardState) return;
+      currentTitle.textContent = boardState.name;
+      currentProjectIcon.style.setProperty("--project-color",boardState.color);
+      currentProjectIcon.innerHTML = icons[boardState.icon] || icons.folder;
+      currentProjectIcon.style.cursor = "";
+      currentTitle.style.cursor = "";
+    }
+
+    function switchProject(id){
+      if(id === appState.activeBoardId) return;
+      appState.activeBoardId = id;
+      boardState = getActiveBoard();
+      showArchived = false;
+      persistWorkspace();
+      renderAll();
+
+      if(window.innerWidth <= 760){
+        setSidebar(false);
+      }
+    }
+
+    metaProjectButton.addEventListener("click",() => switchProject(META_ID));
+    metaProjectRow.addEventListener("click",event => {
+      if(event.target.closest("button") && event.target !== metaProjectButton) return;
+      switchProject(META_ID);
+    });
+
+    function setSidebar(open){
+      sidebarOpen = open;
+      workspace.classList.toggle("sidebar-open",sidebarOpen);
+
+      const toggle = document.getElementById("sidebarToggle");
+      toggle.innerHTML = sidebarOpen ? icons.panelClose : icons.panelOpen;
+      toggle.setAttribute("aria-label",sidebarOpen ? "Close projects" : "Open projects");
+    }
+
+    document.getElementById("sidebarToggle").addEventListener("click",() => setSidebar(!sidebarOpen));
+    document.getElementById("mobileScrim").addEventListener("click",() => setSidebar(false));
+    document.getElementById("newProject").addEventListener("click",openNewProject);
+    document.getElementById("metaRailButton").addEventListener("click",() => switchProject(META_ID));
+    document.getElementById("newRailProject").addEventListener("click",openNewProject);
+    currentProjectIcon.addEventListener("click",() => {
+      if(boardState) openProjectEditor(boardState.id);
+    });
+    currentTitle.addEventListener("click",() => {
+      if(boardState) openProjectEditor(boardState.id);
+    });
+
+    function autoArchiveAllBoards(){
+      const cutoff = Date.now() - ARCHIVE_AFTER_MS;
+      let changed = false;
+
+      appState.boards.forEach(project => {
+        const doneIds = new Set(project.columns.filter(c => c.isDone).map(c => c.id));
+
+        project.tasks.forEach(task => {
+          if(!task.archived && doneIds.has(task.columnId) && task.enteredAt <= cutoff){
+            task.archived = true;
+            task.archivedAt = Date.now();
+            changed = true;
+          }
+        });
+      });
+
+      if(changed) persistWorkspace();
+    }
+
+
+    function getProjectRollupStatus(project){
+      const progressIds = new Set(
+        project.columns.filter(column => column.isProgress).map(column => column.id)
+      );
+      const doneIds = new Set(
+        project.columns.filter(column => column.isDone).map(column => column.id)
+      );
+
+      const activeTasks = project.tasks.filter(task => !task.archived);
+
+      if(activeTasks.some(task => progressIds.has(task.columnId))){
+        return "progress";
+      }
+
+      if(
+        project.tasks.length > 0 &&
+        project.tasks.every(task => task.archived || doneIds.has(task.columnId))
+      ){
+        return "done";
+      }
+
+      return "backlog";
+    }
+
+
+    function renderMetaBoard(){
+      boardShell.classList.add("meta-mode");
+      board.style.setProperty("--columns",3);
+      board.innerHTML = "";
+
+      const metaColumns = [
+        {id:"meta-backlog",title:"Backlog",status:"backlog"},
+        {id:"meta-progress",title:"Progress",status:"progress"},
+        {id:"meta-done",title:"Done",status:"done"}
+      ];
+
+      metaColumns.forEach(metaColumn => {
+        const projects = appState.boards.filter(project => getProjectRollupStatus(project) === metaColumn.status);
+        const visibleCount = projects.length;
+
+        const columnEl = document.createElement("section");
+        columnEl.className = "column";
+
+        const head = document.createElement("div");
+        head.className = "column-head";
+
+        const title = document.createElement("div");
+        title.className = "column-title-button";
+        title.style.cursor = "default";
+        title.textContent = metaColumn.title;
+
+        const count = document.createElement("span");
+        count.className = `count semantic-${metaColumn.status}`;
+        count.textContent = visibleCount;
+
+        head.append(title,count);
+
+        const list = document.createElement("div");
+        list.className = "task-list";
+
+        projects.forEach(project => {
+          list.appendChild(createMetaProjectCard(project,metaColumn.status));
+        });
+
+        columnEl.append(head,list);
+        board.appendChild(columnEl);
+      });
+    }
+
+
+    function createMetaProjectCard(project,status){
+      const card = document.createElement("article");
+      card.className = "meta-project-card";
+      card.style.setProperty("--project-color",project.color);
+      card.setAttribute("role","button");
+      card.setAttribute("tabindex","0");
+      card.setAttribute("aria-label",`Open ${project.name}`);
+
+      const head = document.createElement("div");
+      head.className = "meta-card-head";
+
+      const icon = document.createElement("div");
+      icon.className = "meta-card-icon";
+      icon.innerHTML = icons[project.icon] || icons.folder;
+
+      const title = document.createElement("div");
+      title.className = "meta-card-title";
+      title.textContent = project.name;
+
+      head.append(icon,title);
+
+      const mini = document.createElement("div");
+      mini.className = "mini-board";
+      mini.style.setProperty("--mini-cols",Math.max(project.columns.length,1));
+
+      project.columns.forEach(column => {
+        const miniColumn = document.createElement("div");
+        miniColumn.className = "mini-column";
+
+        const miniHead = document.createElement("div");
+        const semanticClass = getColumnSemanticClass(column);
+        miniHead.className = `mini-column-head ${semanticClass}`;
+        miniHead.textContent = column.title;
+        miniHead.title = column.title;
+        miniColumn.appendChild(miniHead);
+
+        const tasks = project.tasks.filter(task => task.columnId === column.id && !task.archived);
+        const shown = tasks.slice(0,5);
+
+        shown.forEach(task => {
+          const block = document.createElement("div");
+          block.className = `mini-task priority-${task.priority}`;
+          block.title = task.title;
+          miniColumn.appendChild(block);
+        });
+
+        if(tasks.length > shown.length){
+          const more = document.createElement("div");
+          more.className = "mini-more";
+          more.textContent = `+${tasks.length-shown.length}`;
+          miniColumn.appendChild(more);
+        }
+
+        mini.appendChild(miniColumn);
+      });
+
+      if(project.columns.length === 0){
+        const empty = document.createElement("div");
+        empty.className = "meta-empty-copy";
+        empty.textContent = "Empty board";
+        mini.appendChild(empty);
+      }
+
+      card.append(head,mini);
+
+      const open = () => switchProject(project.id);
+      card.addEventListener("click",open);
+      card.addEventListener("keydown",event => {
+        if(event.key === "Enter" || event.key === " "){
+          event.preventDefault();
+          open();
+        }
+      });
+
+      return card;
+    }
+
+    function renderBoard(){
+      boardShell.classList.remove("meta-mode");
+      board.style.setProperty("--columns",Math.max(boardState.columns.length,1));
+      board.innerHTML = "";
+
+      boardState.columns.forEach(column => board.appendChild(createColumn(column)));
+      updateAges();
+    }
+
+
+    function getColumnSemanticClass(column){
+      if(column?.isDone) return "semantic-done";
+      if(column?.isProgress) return "semantic-progress";
+      if(column?.isBacklog) return "semantic-backlog";
+      return "semantic-custom";
+    }
+
+    function createColumn(column){
+      const columnEl = document.createElement("section");
+      columnEl.className = "column";
+      columnEl.dataset.columnId = column.id;
+
+      const activeTasks = boardState.tasks.filter(task => task.columnId === column.id && !task.archived);
+      let visibleTasks = activeTasks;
+
+      if(column.isDone && showArchived){
+        visibleTasks = boardState.tasks.filter(task => task.columnId === column.id);
+      }
+
+      const head = document.createElement("div");
+      head.className = "column-head";
+
+      const handle = document.createElement("button");
+      handle.className = "drag-handle";
+      handle.type = "button";
+      handle.draggable = true;
+      handle.setAttribute("aria-label",`Move ${column.title}`);
+      handle.innerHTML = icons.grip;
+
+      const titleButton = document.createElement("button");
+      titleButton.type = "button";
+      titleButton.className = "column-title-button";
+      titleButton.textContent = column.title;
+      titleButton.title = "Click to rename";
+      titleButton.addEventListener("click",() => beginRenameColumn(column.id,titleButton));
+
+      const count = document.createElement("span");
+      count.className = `count ${getColumnSemanticClass(column)}`;
+      count.textContent = activeTasks.length;
+
+      const spacer = document.createElement("div");
+      spacer.className = "column-spacer";
+
+      head.append(handle,titleButton,count,spacer);
+
+      if(column.isDone){
+        const archiveFilter = document.createElement("div");
+        archiveFilter.className = "archive-filter";
+
+        const label = document.createElement("span");
+        label.className = "archive-filter-label";
+        label.textContent = "Archived";
+
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = `switch${showArchived ? " on" : ""}`;
+        toggle.setAttribute("aria-label","Show archived tasks");
+        toggle.setAttribute("aria-pressed",showArchived ? "true" : "false");
+        toggle.addEventListener("click",event => {
+          event.stopPropagation();
+          showArchived = !showArchived;
+          renderBoard();
+        });
+
+        archiveFilter.append(label,toggle);
+        head.appendChild(archiveFilter);
+      }
+
+      const add = document.createElement("button");
+      add.type = "button";
+      add.className = "add-task";
+      add.setAttribute("aria-label",`Add task to ${column.title}`);
+      add.innerHTML = icons.plus;
+      add.addEventListener("click",() => openCreateTask(column.id));
+      head.appendChild(add);
+
+      const list = document.createElement("div");
+      list.className = "task-list";
+      list.dataset.columnId = column.id;
+
+      if(visibleTasks.length === 0){
+        list.appendChild(createEmpty());
+      }else{
+        visibleTasks.forEach(task => list.appendChild(createTaskCard(task,column)));
+      }
+
+      setupColumnDrag(columnEl,handle);
+      setupTaskDropZone(list);
+
+      columnEl.append(head,list);
+      return columnEl;
+    }
+
+    function createEmpty(){
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "Suelta una tarea aquí";
+      return empty;
+    }
+
+    function createTaskCard(task,column){
+      const card = document.createElement("article");
+      card.className = `task priority-${task.priority}${task.archived ? " archived" : ""}`;
+      card.dataset.taskId = task.id;
+      card.draggable = !task.archived;
+
+      const title = document.createElement("h3");
+      title.className = "task-title";
+      title.textContent = task.title;
+      card.appendChild(title);
+
+      const description = document.createElement("p");
+      description.className = "task-description";
+      if(task.description?.trim()){
+        description.textContent = task.description;
+      }else{
+        description.textContent = "Placeholder";
+        description.classList.add("empty-description");
+      }
+      card.appendChild(description);
+
+      const meta = document.createElement("div");
+      meta.className = "task-meta";
+
+      const age = document.createElement("span");
+      age.className = "status-age";
+      age.dataset.enteredAt = task.enteredAt;
+      age.innerHTML = `${icons.clock}<span class="age-text"></span>`;
+      meta.appendChild(age);
+
+      if(column.isDone && !task.archived){
+        const archive = document.createElement("button");
+        archive.type = "button";
+        archive.className = "archive-task";
+        archive.innerHTML = `${icons.archive}<span>Archivar</span>`;
+        archive.addEventListener("pointerdown",event => event.stopPropagation());
+        archive.addEventListener("mousedown",event => event.stopPropagation());
+        archive.addEventListener("click",event => {
+          event.stopPropagation();
+          task.archived = true;
+          task.archivedAt = Date.now();
+          persistWorkspace();
+          renderBoard();
+          showToast("Tarea archivada");
+        });
+        meta.appendChild(archive);
+      }
+
+      if(column.isDone && task.archived){
+        const unarchive = document.createElement("button");
+        unarchive.type = "button";
+        unarchive.className = "unarchive-task";
+        unarchive.innerHTML = `${icons.unarchive}<span>Desarchivar</span>`;
+        unarchive.addEventListener("pointerdown",event => event.stopPropagation());
+        unarchive.addEventListener("mousedown",event => event.stopPropagation());
+        unarchive.addEventListener("click",event => {
+          event.stopPropagation();
+          task.archived = false;
+          task.archivedAt = null;
+          task.enteredAt = Date.now();
+          persistWorkspace();
+          renderBoard();
+          showToast("Tarea restaurada");
+        });
+        meta.appendChild(unarchive);
+      }
+
+      card.appendChild(meta);
+
+      if(!task.archived){
+        card.addEventListener("dragstart",event => {
+          if(draggingColumnId){
+            event.preventDefault();
+            return;
+          }
+
+          draggingTaskId = task.id;
+          draggingTaskEl = card;
+          originalTaskColumnId = task.columnId;
+          taskDropCommitted = false;
+          suppressTaskClick = true;
+
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain",`task:${task.id}`);
+          requestAnimationFrame(() => card.classList.add("dragging"));
+        });
+
+        card.addEventListener("dragend",() => {
+          if(!taskDropCommitted) renderBoard();
+          clearTaskDrag();
+          setTimeout(() => suppressTaskClick = false,80);
+        });
+
+        setupTouchTaskDrag(card,task);
+      }
+
+      card.addEventListener("click",() => {
+        if(!suppressTaskClick) openEditTask(task.id);
+      });
+
+      return card;
+    }
+
+    function setupTaskDropZone(list){
+      list.addEventListener("dragover",event => {
+        if(!draggingTaskEl || draggingColumnId) return;
+        event.preventDefault();
+
+        const empty = list.querySelector(".empty");
+        if(empty) empty.remove();
+
+        const firstRects = snapshotTaskRects();
+        const after = getDragAfterElement(list,event.clientY);
+
+        if(after == null){
+          if(list.lastElementChild !== draggingTaskEl){
+            list.appendChild(draggingTaskEl);
+            animateTaskLayout(firstRects);
+          }
+        }else if(after !== draggingTaskEl && draggingTaskEl.nextElementSibling !== after){
+          list.insertBefore(draggingTaskEl,after);
+          animateTaskLayout(firstRects);
+        }
+
+        updateVisibleCounts();
+      });
+
+      list.addEventListener("drop",event => {
+        if(!draggingTaskId || !draggingTaskEl || draggingColumnId) return;
+        event.preventDefault();
+        taskDropCommitted = true;
+
+        const task = boardState.tasks.find(item => item.id === draggingTaskId);
+        const newColumnId = list.dataset.columnId;
+
+        if(task && task.columnId !== newColumnId){
+          task.columnId = newColumnId;
+          task.enteredAt = Date.now();
+          task.archived = false;
+          task.archivedAt = null;
+        }
+
+        syncTasksFromDom();
+        persistWorkspace();
+        clearTaskDrag();
+        renderBoard();
+      });
+    }
+
+    function getDragAfterElement(container,y){
+      const cards = [...container.querySelectorAll(".task:not(.dragging):not(.archived)")];
+
+      return cards.reduce((closest,child) => {
+        const rect = child.getBoundingClientRect();
+        const offset = y - rect.top - rect.height/2;
+        if(offset < 0 && offset > closest.offset) return {offset,element:child};
+        return closest;
+      },{offset:Number.NEGATIVE_INFINITY,element:null}).element;
+    }
+
+    function snapshotTaskRects(){
+      const map = new Map();
+      document.querySelectorAll(".task:not(.dragging)").forEach(el => map.set(el.dataset.taskId,el.getBoundingClientRect()));
+      return map;
+    }
+
+    function animateTaskLayout(firstRects){
+      document.querySelectorAll(".task:not(.dragging)").forEach(el => {
+        const first = firstRects.get(el.dataset.taskId);
+        if(!first) return;
+
+        const last = el.getBoundingClientRect();
+        const dx = first.left-last.left;
+        const dy = first.top-last.top;
+        if(Math.abs(dx)<1 && Math.abs(dy)<1) return;
+
+        el.animate(
+          [{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],
+          {duration:180,easing:"cubic-bezier(.22,.72,.22,1)"}
+        );
+      });
+    }
+
+    function setupColumnDrag(columnEl,handle){
+      handle.addEventListener("dragstart",event => {
+        draggingColumnId = columnEl.dataset.columnId;
+        draggingColumnEl = columnEl;
+        columnDropCommitted = false;
+        draggedColumnCanDelete = columnTaskCount(draggingColumnId) === 0;
+        setEdgeTrashMode(draggedColumnCanDelete);
+
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain",`column:${draggingColumnId}`);
+
+        const rect = columnEl.getBoundingClientRect();
+        const ghost = columnEl.cloneNode(true);
+        ghost.classList.add("column-drag-ghost");
+        ghost.style.width = `${rect.width}px`;
+        ghost.style.height = `${Math.min(rect.height,window.innerHeight*.78)}px`;
+        ghost.style.left = "-9999px";
+        ghost.style.top = "-9999px";
+        document.body.appendChild(ghost);
+
+        try{
+          event.dataTransfer.setDragImage(ghost,Math.max(18,Math.min(event.clientX-rect.left,rect.width-18)),24);
+        }catch(e){}
+
+        setTimeout(() => ghost.remove(),0);
+        requestAnimationFrame(() => columnEl.classList.add("column-placeholder"));
+      });
+
+      handle.addEventListener("dragend",() => {
+        if(!columnDropCommitted) renderBoard();
+        clearColumnDrag();
+        setEdgeAddMode();
+      });
+
+      setupTouchColumnDrag(columnEl,handle);
+    }
+
+    board.addEventListener("dragover",event => {
+      if(!draggingColumnEl) return;
+      event.preventDefault();
+
+      const candidates = [...board.querySelectorAll(".column:not(.column-placeholder)")];
+      if(candidates.length === 0) return;
+
+      const firstRects = snapshotColumnRects();
+      let target = null;
+
+      for(const candidate of candidates){
+        const rect = candidate.getBoundingClientRect();
+        if(event.clientX < rect.left + rect.width/2){
+          target = candidate;
+          break;
+        }
+      }
+
+      if(target){
+        if(draggingColumnEl.nextElementSibling !== target){
+          board.insertBefore(draggingColumnEl,target);
+          animateColumnLayout(firstRects);
+        }
+      }else if(board.lastElementChild !== draggingColumnEl){
+        board.appendChild(draggingColumnEl);
+        animateColumnLayout(firstRects);
+      }
+    });
+
+    board.addEventListener("drop",event => {
+      if(!draggingColumnEl) return;
+      event.preventDefault();
+      columnDropCommitted = true;
+      syncColumnsFromDom();
+      persistWorkspace();
+      clearColumnDrag();
+      setEdgeAddMode();
+      renderBoard();
+    });
+
+    function snapshotColumnRects(){
+      const map = new Map();
+      board.querySelectorAll(".column:not(.column-placeholder)").forEach(el => map.set(el.dataset.columnId,el.getBoundingClientRect()));
+      return map;
+    }
+
+    function animateColumnLayout(firstRects){
+      board.querySelectorAll(".column:not(.column-placeholder)").forEach(el => {
+        const first = firstRects.get(el.dataset.columnId);
+        if(!first) return;
+        const last = el.getBoundingClientRect();
+        const dx = first.left-last.left;
+        const dy = first.top-last.top;
+        if(Math.abs(dx)<1 && Math.abs(dy)<1) return;
+
+        el.animate(
+          [{transform:`translate(${dx}px,${dy}px)`},{transform:"translate(0,0)"}],
+          {duration:210,easing:"cubic-bezier(.22,.72,.22,1)"}
+        );
+      });
+    }
+
+    function setEdgeAddMode(){
+      edgeAction.className = "edge-add";
+      edgeAction.innerHTML = icons.plus;
+      edgeAction.setAttribute("aria-label","Add column");
+      edgeAction.title = "Add column";
+    }
+
+    function setEdgeTrashMode(canDelete){
+      edgeAction.className = `edge-add trash-mode ${canDelete ? "can-delete" : "blocked"}`;
+      edgeAction.innerHTML = icons.trash;
+      edgeAction.setAttribute("aria-label",canDelete ? "Delete column" : "Column must be empty before deleting");
+      edgeAction.title = canDelete ? "Drop here to delete column" : "Column must be empty before deleting";
+    }
+
+    edgeAction.addEventListener("click",() => {
+      if(draggingColumnId) return;
+      addColumn();
+    });
+
+    edgeAction.addEventListener("dragover",event => {
+      if(!draggingColumnEl) return;
+      event.preventDefault();
+      if(draggedColumnCanDelete) edgeAction.classList.add("trash-hover");
+    });
+
+    edgeAction.addEventListener("dragleave",() => edgeAction.classList.remove("trash-hover"));
+
+    edgeAction.addEventListener("drop",event => {
+      if(!draggingColumnEl) return;
+      event.preventDefault();
+      event.stopPropagation();
+      columnDropCommitted = true;
+
+      if(!draggedColumnCanDelete){
+        showToast("Solo se pueden eliminar columnas vacías");
+        clearColumnDrag();
+        setEdgeAddMode();
+        renderBoard();
+        return;
+      }
+
+      const id = draggingColumnId;
+      boardState.columns = boardState.columns.filter(col => col.id !== id);
+      persistWorkspace();
+      showToast("Columna eliminada");
+      clearColumnDrag();
+      setEdgeAddMode();
+      renderBoard();
+    });
+
+    function columnTaskCount(columnId){
+      return boardState.tasks.filter(task => task.columnId === columnId).length;
+    }
+
+    function syncTasksFromDom(){
+      const byId = new Map(boardState.tasks.map(task => [task.id,task]));
+      const ordered = [];
+
+      boardState.columns.forEach(column => {
+        const list = board.querySelector(`.task-list[data-column-id="${cssEscape(column.id)}"]`);
+        if(!list) return;
+
+        list.querySelectorAll(".task").forEach(card => {
+          const task = byId.get(card.dataset.taskId);
+          if(task && !task.archived){
+            task.columnId = column.id;
+            ordered.push(task);
+            byId.delete(task.id);
+          }
+        });
+
+        boardState.tasks
+          .filter(task => task.columnId === column.id && task.archived && byId.has(task.id))
+          .forEach(task => {
+            ordered.push(task);
+            byId.delete(task.id);
+          });
+      });
+
+      byId.forEach(task => ordered.push(task));
+      boardState.tasks = ordered;
+    }
+
+    function syncColumnsFromDom(){
+      const byId = new Map(boardState.columns.map(column => [column.id,column]));
+      const ordered = [];
+
+      board.querySelectorAll(".column").forEach(el => {
+        const column = byId.get(el.dataset.columnId);
+        if(column){
+          ordered.push(column);
+          byId.delete(column.id);
+        }
+      });
+
+      byId.forEach(column => ordered.push(column));
+      boardState.columns = ordered;
+    }
+
+    function clearTaskDrag(){
+      if(draggingTaskEl) draggingTaskEl.classList.remove("dragging");
+      draggingTaskId = null;
+      draggingTaskEl = null;
+      originalTaskColumnId = null;
+      taskDropCommitted = false;
+    }
+
+    function clearColumnDrag(){
+      if(draggingColumnEl) draggingColumnEl.classList.remove("column-placeholder");
+      draggingColumnId = null;
+      draggingColumnEl = null;
+      columnDropCommitted = false;
+      draggedColumnCanDelete = false;
+      edgeAction.classList.remove("trash-hover");
+    }
+
+    function updateVisibleCounts(){
+      board.querySelectorAll(".column").forEach(column => {
+        const count = column.querySelector(".count");
+        const list = column.querySelector(".task-list");
+        if(count && list) count.textContent = list.querySelectorAll(".task:not(.archived)").length;
+      });
+    }
+
+    function beginRenameColumn(columnId,button){
+      const column = boardState.columns.find(item => item.id === columnId);
+      if(!column) return;
+
+      const input = document.createElement("input");
+      input.className = "column-title-input";
+      input.value = column.title;
+      input.maxLength = 34;
+      button.replaceWith(input);
+      input.focus();
+      input.select();
+
+      let finished = false;
+
+      const finish = save => {
+        if(finished) return;
+        finished = true;
+        const next = input.value.trim();
+        if(save && next){
+          column.title = next;
+          persistWorkspace();
+        }
+        renderBoard();
+      };
+
+      input.addEventListener("keydown",event => {
+        if(event.key === "Enter"){event.preventDefault();finish(true)}
+        if(event.key === "Escape"){event.preventDefault();finish(false)}
+      });
+
+      input.addEventListener("blur",() => finish(true));
+    }
+
+    function addColumn(){
+      const column = {
+        id:crypto.randomUUID(),
+        title:"New column",
+        isDone:false,
+        isProgress:false,
+        isBacklog:false
+      };
+
+      boardState.columns.push(column);
+      persistWorkspace();
+      renderBoard();
+
+      requestAnimationFrame(() => {
+        const el = board.querySelector(`.column[data-column-id="${cssEscape(column.id)}"]`);
+        const titleButton = el?.querySelector(".column-title-button");
+        if(titleButton) beginRenameColumn(column.id,titleButton);
+      });
+    }
+
+    /* ---------- Task dialog ---------- */
+
+    function openCreateTask(columnId){
+      const column = boardState.columns.find(item => item.id === columnId);
+      if(!column) return;
+
+      editingTaskId = null;
+      creatingColumnId = columnId;
+      taskModalKicker.textContent = "Nueva tarea";
+      taskModalTitle.textContent = `Add to ${column.title}`;
+      saveTask.textContent = "Crear tarea";
+      deleteTask.hidden = true;
+
+      taskForm.reset();
+      selectedPriority = "medium";
+      updatePriorityPicker();
+      openModal(taskModalBackdrop);
+
+      requestAnimationFrame(() => taskTitle.focus());
+    }
+
+    function openEditTask(taskId){
+      const task = boardState.tasks.find(item => item.id === taskId);
+      if(!task) return;
+
+      editingTaskId = taskId;
+      creatingColumnId = null;
+      taskModalKicker.textContent = task.archived ? "Archived task" : "Detalles de tarea";
+      taskModalTitle.textContent = "Edit task";
+      saveTask.textContent = "Guardar cambios";
+      deleteTask.hidden = false;
+
+      taskTitle.value = task.title;
+      taskDescription.value = task.description || "";
+      selectedPriority = task.priority;
+      updatePriorityPicker();
+      openModal(taskModalBackdrop);
+    }
+
+    function setPriority(priority){
+      selectedPriority = priority;
+      updatePriorityPicker();
+      priorityPicker.classList.remove("open");
+      priorityTrigger.setAttribute("aria-expanded","false");
+    }
+
+    function updatePriorityPicker(){
+      const labels = {low:"Low",medium:"Medium",high:"High"};
+      const colors = {low:"var(--low)",medium:"var(--medium)",high:"var(--high)"};
+
+      priorityText.textContent = labels[selectedPriority];
+      prioritySwatch.style.setProperty("--priority-color",colors[selectedPriority]);
+
+      document.querySelectorAll(".priority-option").forEach(option => {
+        const selected = option.dataset.priority === selectedPriority;
+        option.classList.toggle("selected",selected);
+        option.setAttribute("aria-selected",selected ? "true" : "false");
+      });
+    }
+
+    priorityTrigger.addEventListener("click",() => {
+      const open = !priorityPicker.classList.contains("open");
+      priorityPicker.classList.toggle("open",open);
+      priorityTrigger.setAttribute("aria-expanded",open ? "true" : "false");
+    });
+
+    document.querySelectorAll(".priority-option").forEach(option => {
+      option.addEventListener("click",() => setPriority(option.dataset.priority));
+    });
+
+    document.addEventListener("mousedown",event => {
+      if(!priorityPicker.contains(event.target)){
+        priorityPicker.classList.remove("open");
+        priorityTrigger.setAttribute("aria-expanded","false");
+      }
+    });
+
+    taskForm.addEventListener("submit",event => {
+      event.preventDefault();
+
+      const title = taskTitle.value.trim();
+      const description = taskDescription.value.trim();
+      if(!title) return;
+
+      if(editingTaskId){
+        const task = boardState.tasks.find(item => item.id === editingTaskId);
+        if(task){
+          task.title = title;
+          task.description = description;
+          task.priority = selectedPriority;
+        }
+      }else{
+        const columnId = creatingColumnId || boardState.columns[0]?.id;
+        boardState.tasks.push({
+          id:crypto.randomUUID(),
+          columnId,
+          title,
+          description,
+          priority:selectedPriority,
+          enteredAt:Date.now(),
+          archived:false,
+          archivedAt:null
+        });
+      }
+
+      persistWorkspace();
+      renderBoard();
+      closeModal(taskModalBackdrop);
+    });
+
+    deleteTask.addEventListener("click",() => {
+      if(!editingTaskId) return;
+      boardState.tasks = boardState.tasks.filter(task => task.id !== editingTaskId);
+      persistWorkspace();
+      renderBoard();
+      closeModal(taskModalBackdrop);
+      showToast("Tarea eliminada");
+    });
+
+    /* ---------- Project dialog ---------- */
+
+    function buildProjectPicker(){
+      colorGrid.innerHTML = "";
+      PROJECT_COLORS.forEach(color => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `color-choice${color === selectedProjectColor ? " selected" : ""}`;
+        button.style.setProperty("--swatch",color);
+        button.setAttribute("aria-label",`Use ${color}`);
+        button.addEventListener("click",() => {
+          selectedProjectColor = color;
+          buildProjectPicker();
+        });
+        colorGrid.appendChild(button);
+      });
+
+      iconGrid.innerHTML = "";
+      PROJECT_ICONS.forEach(name => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `icon-choice${name === selectedProjectIcon ? " selected" : ""}`;
+        button.style.setProperty("--selected-icon-color",selectedProjectColor);
+        button.innerHTML = icons[name];
+        button.setAttribute("aria-label",`Use ${name} icon`);
+        button.addEventListener("click",() => {
+          selectedProjectIcon = name;
+          buildProjectPicker();
+        });
+        iconGrid.appendChild(button);
+      });
+    }
+
+
+    function openNewProject(){
+      projectModalMode = "new";
+      editingProjectId = null;
+      selectedProjectIcon = "folder";
+      selectedProjectColor = PROJECT_COLORS[0];
+      projectName.value = "";
+      projectModalKicker.textContent = "Nuevo kanban";
+      projectModalTitle.textContent = "Crear proyecto";
+      document.getElementById("saveProject").textContent = "Create";
+      buildProjectPicker();
+      openModal(projectModalBackdrop);
+      requestAnimationFrame(() => projectName.focus());
+    }
+
+    function openProjectEditor(projectId){
+      const project = appState.boards.find(item => item.id === projectId);
+      if(!project) return;
+
+      projectModalMode = "edit";
+      editingProjectId = projectId;
+      selectedProjectIcon = project.icon;
+      selectedProjectColor = project.color;
+      projectName.value = project.name;
+      projectModalKicker.textContent = "Project";
+      projectModalTitle.textContent = "Apariencia del proyecto";
+      document.getElementById("saveProject").textContent = "Save";
+      buildProjectPicker();
+      openModal(projectModalBackdrop);
+    }
+
+    projectForm.addEventListener("submit",event => {
+      event.preventDefault();
+      const name = projectName.value.trim();
+      if(!name) return;
+
+      if(projectModalMode === "new"){
+        const id = crypto.randomUUID();
+        const project = makeBoard(id,name,selectedProjectIcon,selectedProjectColor,[]);
+        appState.boards.push(project);
+        appState.activeBoardId = id;
+        boardState = project;
+        showArchived = false;
+        persistWorkspace();
+        renderAll();
+        closeModal(projectModalBackdrop);
+        showToast("Kanban creado");
+      }else{
+        const project = appState.boards.find(item => item.id === editingProjectId);
+        if(project){
+          project.name = name;
+          project.icon = selectedProjectIcon;
+          project.color = selectedProjectColor;
+          persistWorkspace();
+          renderAll();
+        }
+        closeModal(projectModalBackdrop);
+      }
+    });
+
+    /* ---------- Shared dialogs ---------- */
+
+    function openModal(backdrop){
+      backdrop.classList.add("open");
+      backdrop.setAttribute("aria-hidden","false");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal(backdrop){
+      backdrop.classList.remove("open");
+      backdrop.setAttribute("aria-hidden","true");
+
+      if(!document.querySelector(".modal-backdrop.open")){
+        document.body.style.overflow = "";
+      }
+
+      if(backdrop === taskModalBackdrop){
+        priorityPicker.classList.remove("open");
+        priorityTrigger.setAttribute("aria-expanded","false");
+        editingTaskId = null;
+        creatingColumnId = null;
+      }
+    }
+
+    document.getElementById("closeTaskModal").addEventListener("click",() => closeModal(taskModalBackdrop));
+    document.getElementById("cancelTaskModal").addEventListener("click",() => closeModal(taskModalBackdrop));
+    document.getElementById("closeProjectModal").addEventListener("click",() => closeModal(projectModalBackdrop));
+    document.getElementById("cancelProjectModal").addEventListener("click",() => closeModal(projectModalBackdrop));
+
+    taskModalBackdrop.addEventListener("mousedown",event => {
+      if(event.target === taskModalBackdrop) closeModal(taskModalBackdrop);
+    });
+
+    projectModalBackdrop.addEventListener("mousedown",event => {
+      if(event.target === projectModalBackdrop) closeModal(projectModalBackdrop);
+    });
+
+    document.addEventListener("keydown",event => {
+      if(event.key !== "Escape") return;
+      if(projectModalBackdrop.classList.contains("open")) closeModal(projectModalBackdrop);
+      else if(taskModalBackdrop.classList.contains("open")) closeModal(taskModalBackdrop);
+      else if(sidebarOpen && window.innerWidth <= 760) setSidebar(false);
+    });
+
+    /* ---------- Time ---------- */
+
+    function updateAges(){
+      document.querySelectorAll(".status-age").forEach(el => {
+        const text = el.querySelector(".age-text");
+        if(text) text.textContent = formatElapsed(Date.now()-Number(el.dataset.enteredAt));
+      });
+    }
+
+    function formatElapsed(ms){
+      const seconds = Math.max(0,Math.floor(ms/1000));
+      if(seconds < 60) return `${seconds}s`;
+      const minutes = Math.floor(seconds/60);
+      if(minutes < 60) return `${minutes}m`;
+      const hours = Math.floor(minutes/60);
+      if(hours < 24) return `${hours}h`;
+      return `${Math.floor(hours/24)}d`;
+    }
+
+    /* ---------- Touch task drag ---------- */
+
+    function setupTouchTaskDrag(card,task){
+      let timer = null;
+      let pointerId = null;
+      let startX = 0;
+      let startY = 0;
+      let active = false;
+
+      card.addEventListener("pointerdown",event => {
+        if(event.pointerType === "mouse" || touchTaskDrag || touchColumnDrag) return;
+        pointerId = event.pointerId;
+        startX = event.clientX;
+        startY = event.clientY;
+
+        timer = setTimeout(() => {
+          active = true;
+          suppressTaskClick = true;
+          startTouchTaskDrag(card,task,event.clientX,event.clientY,pointerId);
+        },180);
+      });
+
+      card.addEventListener("pointermove",event => {
+        if(event.pointerId !== pointerId) return;
+
+        if(!active){
+          if(Math.hypot(event.clientX-startX,event.clientY-startY)>9){
+            clearTimeout(timer);
+            timer = null;
+          }
+          return;
+        }
+
+        event.preventDefault();
+        moveTouchTaskDrag(event.clientX,event.clientY);
+      });
+
+      const finish = event => {
+        if(event.pointerId !== pointerId) return;
+        clearTimeout(timer);
+        timer = null;
+
+        if(active){
+          event.preventDefault();
+          finishTouchTaskDrag();
+          active = false;
+          setTimeout(() => suppressTaskClick = false,120);
+        }
+
+        pointerId = null;
+      };
+
+      card.addEventListener("pointerup",finish);
+      card.addEventListener("pointercancel",finish);
+    }
+
+    function startTouchTaskDrag(card,task,x,y,pointerId){
+      const rect = card.getBoundingClientRect();
+      const ghost = card.cloneNode(true);
+      ghost.querySelector(".archive-task")?.remove();
+      ghost.classList.remove("dragging");
+      ghost.classList.add("touch-drag-ghost");
+      ghost.style.width = `${rect.width}px`;
+      ghost.style.left = `${rect.left}px`;
+      ghost.style.top = `${rect.top}px`;
+      document.body.appendChild(ghost);
+
+      draggingTaskId = task.id;
+      draggingTaskEl = card;
+      originalTaskColumnId = task.columnId;
+
+      touchTaskDrag = {pointerId,ghost,offsetX:x-rect.left,offsetY:y-rect.top};
+      card.classList.add("dragging");
+
+      if(card.setPointerCapture){
+        try{card.setPointerCapture(pointerId)}catch(e){}
+      }
+
+      moveTouchTaskDrag(x,y);
+    }
+
+    function moveTouchTaskDrag(x,y){
+      if(!touchTaskDrag || !draggingTaskEl) return;
+
+      const {ghost,offsetX,offsetY} = touchTaskDrag;
+      ghost.style.left = `${x-offsetX}px`;
+      ghost.style.top = `${y-offsetY}px`;
+
+      const under = document.elementFromPoint(x,y);
+      const list = under?.closest?.(".task-list");
+      if(!list) return;
+
+      const empty = list.querySelector(".empty");
+      if(empty) empty.remove();
+
+      const firstRects = snapshotTaskRects();
+      const after = getDragAfterElement(list,y);
+
+      if(after == null){
+        if(list.lastElementChild !== draggingTaskEl){
+          list.appendChild(draggingTaskEl);
+          animateTaskLayout(firstRects);
+        }
+      }else if(after !== draggingTaskEl && draggingTaskEl.nextElementSibling !== after){
+        list.insertBefore(draggingTaskEl,after);
+        animateTaskLayout(firstRects);
+      }
+
+      updateVisibleCounts();
+
+      if(x < 44) window.scrollBy({left:-14,behavior:"auto"});
+      else if(x > window.innerWidth-44) window.scrollBy({left:14,behavior:"auto"});
+    }
+
+    function finishTouchTaskDrag(){
+      if(!touchTaskDrag || !draggingTaskId || !draggingTaskEl) return;
+
+      const list = draggingTaskEl.closest(".task-list");
+      const newColumnId = list?.dataset.columnId;
+      const task = boardState.tasks.find(item => item.id === draggingTaskId);
+
+      if(task && newColumnId){
+        if(task.columnId !== newColumnId){
+          task.columnId = newColumnId;
+          task.enteredAt = Date.now();
+          task.archived = false;
+          task.archivedAt = null;
+        }
+        syncTasksFromDom();
+        persistWorkspace();
+      }
+
+      touchTaskDrag.ghost.remove();
+      touchTaskDrag = null;
+      clearTaskDrag();
+      renderBoard();
+    }
+
+    /* ---------- Touch column drag ---------- */
+
+    function setupTouchColumnDrag(columnEl,handle){
+      let pointerId = null;
+      let active = false;
+
+      handle.addEventListener("pointerdown",event => {
+        if(event.pointerType === "mouse" || touchTaskDrag || touchColumnDrag) return;
+        event.preventDefault();
+        pointerId = event.pointerId;
+        active = true;
+        startTouchColumnDrag(columnEl,event.clientX,event.clientY,pointerId);
+
+        if(handle.setPointerCapture){
+          try{handle.setPointerCapture(pointerId)}catch(e){}
+        }
+      });
+
+      handle.addEventListener("pointermove",event => {
+        if(!active || event.pointerId !== pointerId) return;
+        event.preventDefault();
+        moveTouchColumnDrag(event.clientX,event.clientY);
+      });
+
+      const finish = event => {
+        if(!active || event.pointerId !== pointerId) return;
+        event.preventDefault();
+        finishTouchColumnDrag(event.clientX,event.clientY);
+        active = false;
+        pointerId = null;
+      };
+
+      handle.addEventListener("pointerup",finish);
+      handle.addEventListener("pointercancel",finish);
+    }
+
+    function startTouchColumnDrag(columnEl,x,y,pointerId){
+      const rect = columnEl.getBoundingClientRect();
+      const ghost = columnEl.cloneNode(true);
+      ghost.classList.add("column-drag-ghost");
+      ghost.style.width = `${rect.width}px`;
+      ghost.style.height = `${Math.min(rect.height,window.innerHeight*.72)}px`;
+      ghost.style.left = `${rect.left}px`;
+      ghost.style.top = `${Math.max(8,Math.min(rect.top,window.innerHeight-80))}px`;
+      document.body.appendChild(ghost);
+
+      draggingColumnId = columnEl.dataset.columnId;
+      draggingColumnEl = columnEl;
+      draggedColumnCanDelete = columnTaskCount(draggingColumnId) === 0;
+      setEdgeTrashMode(draggedColumnCanDelete);
+      columnEl.classList.add("column-placeholder");
+
+      touchColumnDrag = {pointerId,ghost,offsetX:x-rect.left};
+    }
+
+    function moveTouchColumnDrag(x,y){
+      if(!touchColumnDrag || !draggingColumnEl) return;
+
+      const ghostRect = touchColumnDrag.ghost.getBoundingClientRect();
+      touchColumnDrag.ghost.style.left = `${x-touchColumnDrag.offsetX}px`;
+      touchColumnDrag.ghost.style.top = `${Math.max(8,Math.min(y-24,window.innerHeight-ghostRect.height-8))}px`;
+
+      const trashRect = edgeAction.getBoundingClientRect();
+      const overTrash = x>=trashRect.left && x<=trashRect.right && y>=trashRect.top && y<=trashRect.bottom;
+      edgeAction.classList.toggle("trash-hover",overTrash && draggedColumnCanDelete);
+
+      if(overTrash) return;
+
+      const candidates = [...board.querySelectorAll(".column:not(.column-placeholder)")];
+      if(candidates.length === 0) return;
+
+      const firstRects = snapshotColumnRects();
+      let target = null;
+
+      for(const candidate of candidates){
+        const rect = candidate.getBoundingClientRect();
+        if(x < rect.left+rect.width/2){
+          target = candidate;
+          break;
+        }
+      }
+
+      if(target){
+        if(draggingColumnEl.nextElementSibling !== target){
+          board.insertBefore(draggingColumnEl,target);
+          animateColumnLayout(firstRects);
+        }
+      }else if(board.lastElementChild !== draggingColumnEl){
+        board.appendChild(draggingColumnEl);
+        animateColumnLayout(firstRects);
+      }
+
+      if(x < 44) window.scrollBy({left:-14,behavior:"auto"});
+      else if(x > window.innerWidth-44) window.scrollBy({left:14,behavior:"auto"});
+    }
+
+    function finishTouchColumnDrag(x,y){
+      if(!touchColumnDrag || !draggingColumnEl) return;
+
+      const rect = edgeAction.getBoundingClientRect();
+      const overTrash = x>=rect.left && x<=rect.right && y>=rect.top && y<=rect.bottom;
+
+      if(overTrash){
+        if(draggedColumnCanDelete){
+          const id = draggingColumnId;
+          boardState.columns = boardState.columns.filter(col => col.id !== id);
+          persistWorkspace();
+          showToast("Columna eliminada");
+        }else{
+          showToast("Solo se pueden eliminar columnas vacías");
+        }
+      }else{
+        syncColumnsFromDom();
+        persistWorkspace();
+      }
+
+      touchColumnDrag.ghost.remove();
+      touchColumnDrag = null;
+      clearColumnDrag();
+      setEdgeAddMode();
+      renderBoard();
+    }
+
+    function showToast(message){
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"),1400);
+    }
+
+    function cssEscape(value){
+      if(window.CSS && CSS.escape) return CSS.escape(value);
+      return String(value).replace(/["\\]/g,"\\$&");
+    }
+
+    normalizeWorkspace();
+    renderAll();
+    buildProjectPicker();
+    updatePriorityPicker();
+    setSidebar(false);
+
+    setInterval(updateAges,1000);
+    setInterval(() => {
+      autoArchiveAllBoards();
+      if(appState.activeBoardId === META_ID) renderMetaBoard();
+      else renderBoard();
+    },60*1000);
+  </script>
+</body>
+</html>
