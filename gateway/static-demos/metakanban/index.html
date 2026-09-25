@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Kanban Workspace</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23070707'/%3E%3Cpath d='M17 16v32M32 16v32M47 16v32M12 20h10M27 20h10M42 20h10M12 31h10M27 37h10M42 27h10' fill='none' stroke='%2317c7d9' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E" />
   <style>
     :root{
       --bg:#050505;
@@ -15,12 +16,16 @@
       --accent:#17c7d9;
       --accent-soft:#0b1a1c;
 
-      --low:#2ea8ff;
-      --low-bg:#09151d;
+      --low:#55c97a;
+      --low-bg:#09170e;
       --medium:#ffbd3f;
       --medium-bg:#1b1507;
       --high:#ff526f;
       --high-bg:#1d0a0f;
+      --very-high:#a52a45;
+      --very-high-bg:#1d080f;
+      --critical:#9b6cff;
+      --critical-bg:#160d24;
 
       --sidebar-collapsed:44px;
       --sidebar-open:236px;
@@ -627,6 +632,8 @@
     .task.priority-low{--priority:var(--low);--task-bg:var(--low-bg)}
     .task.priority-medium{--priority:var(--medium);--task-bg:var(--medium-bg)}
     .task.priority-high{--priority:var(--high);--task-bg:var(--high-bg)}
+    .task.priority-very_high{--priority:var(--very-high);--task-bg:var(--very-high-bg)}
+    .task.priority-critical{--priority:var(--critical);--task-bg:var(--critical-bg)}
 
     .task::before{
       content:"";
@@ -669,6 +676,14 @@
       -webkit-line-clamp:2;
       -webkit-box-orient:vertical;
       overflow:hidden;
+    }
+
+    .task.done .task-title,
+    .task.done .task-description{
+      color:#70706b;
+      text-decoration:line-through;
+      text-decoration-color:#555550;
+      text-decoration-thickness:1px;
     }
 
     .task-description{
@@ -986,6 +1001,8 @@
     .mini-task.priority-low{--mini-priority:var(--low)}
     .mini-task.priority-medium{--mini-priority:var(--medium)}
     .mini-task.priority-high{--mini-priority:var(--high)}
+    .mini-task.priority-very_high{--mini-priority:var(--very-high)}
+    .mini-task.priority-critical{--mini-priority:var(--critical)}
 
     .mini-more{
       color:#484843;
@@ -1546,17 +1563,25 @@
               <span id="priorityChevron"></span>
             </button>
 
-            <div class="priority-menu" role="listbox" aria-label="Priority">
-              <button class="priority-option" type="button" data-priority="low" role="option">
-                <span class="priority-option-left"><span class="priority-swatch" style="--priority-color:var(--low)"></span><span>Baja</span></span>
+            <div class="priority-menu" role="listbox" aria-label="Prioridad">
+              <button class="priority-option" type="button" data-priority="critical" role="option">
+                <span class="priority-option-left"><span class="priority-swatch" style="--priority-color:var(--critical)"></span><span>Crítica</span></span>
+                <span class="priority-option-check"></span>
+              </button>
+              <button class="priority-option" type="button" data-priority="very_high" role="option">
+                <span class="priority-option-left"><span class="priority-swatch" style="--priority-color:var(--very-high)"></span><span>Muy alta</span></span>
+                <span class="priority-option-check"></span>
+              </button>
+              <button class="priority-option" type="button" data-priority="high" role="option">
+                <span class="priority-option-left"><span class="priority-swatch" style="--priority-color:var(--high)"></span><span>Alta</span></span>
                 <span class="priority-option-check"></span>
               </button>
               <button class="priority-option" type="button" data-priority="medium" role="option">
                 <span class="priority-option-left"><span class="priority-swatch" style="--priority-color:var(--medium)"></span><span>Media</span></span>
                 <span class="priority-option-check"></span>
               </button>
-              <button class="priority-option" type="button" data-priority="high" role="option">
-                <span class="priority-option-left"><span class="priority-swatch" style="--priority-color:var(--high)"></span><span>Alta</span></span>
+              <button class="priority-option" type="button" data-priority="low" role="option">
+                <span class="priority-option-left"><span class="priority-swatch" style="--priority-color:var(--low)"></span><span>Baja</span></span>
                 <span class="priority-option-check"></span>
               </button>
             </div>
@@ -2239,9 +2264,11 @@
 
 
     const PRIORITY_RANK = Object.freeze({
-      high:0,
-      medium:1,
-      low:2
+      critical:0,
+      very_high:1,
+      high:2,
+      medium:3,
+      low:4
     });
 
     function sortBacklogByPriority(project = boardState){
@@ -2366,7 +2393,7 @@
 
     function createTaskCard(task,column){
       const card = document.createElement("article");
-      card.className = `task priority-${task.priority}${task.archived ? " archived" : ""}`;
+      card.className = `task priority-${task.priority}${column.isDone ? " done" : ""}${task.archived ? " archived" : ""}`;
       card.dataset.taskId = task.id;
       card.draggable = !task.archived;
 
@@ -2871,8 +2898,20 @@
     }
 
     function updatePriorityPicker(){
-      const labels = {low:"Low",medium:"Medium",high:"High"};
-      const colors = {low:"var(--low)",medium:"var(--medium)",high:"var(--high)"};
+      const labels = {
+        low:"Baja",
+        medium:"Media",
+        high:"Alta",
+        very_high:"Muy alta",
+        critical:"Crítica"
+      };
+      const colors = {
+        low:"var(--low)",
+        medium:"var(--medium)",
+        high:"var(--high)",
+        very_high:"var(--very-high)",
+        critical:"var(--critical)"
+      };
 
       priorityText.textContent = labels[selectedPriority];
       prioritySwatch.style.setProperty("--priority-color",colors[selectedPriority]);
